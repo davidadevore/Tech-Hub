@@ -47,8 +47,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         let quit = NSMenuItem(title:"Quit Tech Hub",action:#selector(quit),keyEquivalent:"q");quit.target=self;menu.addItem(quit);item.menu=menu
     }
+    private func currentMasterPort() -> Int? {
+        guard let process, process.isRunning,
+              let data = try? Data(contentsOf: support.appendingPathComponent("runtime.json")),
+              let runtime = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
+              let pid = runtime["pid"] as? Int, pid == Int(process.processIdentifier),
+              let actual = runtime["adminPort"] as? Int, (1024...65535).contains(actual) else { return nil }
+        port = actual
+        return actual
+    }
     private func refresh() {
-        guard process?.isRunning == true else { return }
+        guard let port = currentMasterPort() else { return }
         var request = URLRequest(url:URL(string:"http://127.0.0.1:\(port)/api/status")!);request.timeoutInterval=2
         URLSession.shared.dataTask(with:request) { [weak self] data, _, _ in
             guard let self else { return }
@@ -58,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async { if !self.quitting { self.rebuild(count.map { "\($0) of 3 services online · :\(self.port)" } ?? "Starting or unavailable — open logs") } }
         }.resume()
     }
-    @objc private func openMaster() { NSWorkspace.shared.open(URL(string:"http://127.0.0.1:\(port)")!) }
+    @objc private func openMaster() { guard let port = currentMasterPort() else { rebuild("Starting or unavailable — open logs"); return }; NSWorkspace.shared.open(URL(string:"http://127.0.0.1:\(port)")!) }
     @objc private func openConfig() { NSWorkspace.shared.open(support) }
     @objc private func openLogs() { NSWorkspace.shared.open(support.appendingPathComponent("logs")) }
     @objc private func openUpdates() { NSWorkspace.shared.open(URL(string:"https://github.com/horner516/Tech-Hub/releases/latest")!) }

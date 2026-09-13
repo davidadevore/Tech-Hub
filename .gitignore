@@ -11,3 +11,6 @@ services/lux/dist/
 services/lux/.openai/
 services/lux/.wrangler/
 *.log
+
+native-windows/bin/
+native-windows/obj/

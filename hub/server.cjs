@@ -16,6 +16,7 @@ const root = path.resolve(__dirname, '..');
 function save(file, data) {
   const temp = file+'.tmp'; fs.writeFileSync(temp, JSON.stringify(data,null,2)+'\n',{mode:0o600}); fs.renameSync(temp,file);
 }
+function defaultDataDir(platform=process.platform,env=process.env,home=os.homedir()) { return platform==='win32'?path.join(env.LOCALAPPDATA||path.join(home,'AppData','Local'),'Streamline','Tech Hub'):path.join(home,'Library','Application Support','Tech Hub'); }
 function loadConfig(dir) {
   fs.mkdirSync(dir,{recursive:true,mode:0o700});
   const file = path.join(dir,'config.json');
@@ -40,18 +41,38 @@ function sameOrigin(req) { return req.headers['sec-fetch-site']!=='cross-site' &
 function listen(server,port,host) { return new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,()=>{server.removeListener('error',reject);resolve();});}); }
 function close(server) { server.closeAllConnections(); return new Promise(resolve=>server.close(resolve)); }
 function ips(host) { return host==='127.0.0.1'?[]:[...new Set(Object.values(os.networkInterfaces()).flat().filter(n=>n&&!n.internal&&n.family==='IPv4').map(n=>n.address))]; }
-function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><style>body{background:#10171b;color:#f1f5f4;font:16px system-ui;display:grid;place-items:center;min-height:95vh}main{width:min(360px,85vw)}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #526166;font:inherit}button{background:#baf16e;cursor:pointer}p{color:#a9b8b9}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
-async function startHub({dir=process.env.TECH_HUB_DATA_DIR||path.join(os.homedir(),'Library','Application Support','Tech Hub'), launch=true}={}) {
+function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><style>:root{color-scheme:dark}body{background:#071015;color:#f2f7f5;font:16px system-ui;display:grid;place-items:center;min-height:95vh}main{width:min(360px,85vw)}main>p:first-child{color:#ff8a1f;font-weight:700;letter-spacing:.15em}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #31505a;font:inherit}input{background:#0c181e;color:#f2f7f5}button{background:#ff8a1f;color:#1b0d02;border-color:#ff8a1f;font-weight:650;cursor:pointer}button:hover{background:#ffa24f}input:focus-visible,button:focus-visible{outline:2px solid #ff8a1f;outline-offset:3px}p{color:#8ca3aa}p[role=alert]{color:#ff7a7a}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
+async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), launch=true}={}) {
   const config=loadConfig(dir), sessions=new Map(), attempts=new Map(), states=new Map(), servers=[],children=[];
   let stopping=false;
   const startedAt=Date.now();
   const services=definitions.map(d=>({...d,...config.services[d.id]}));
+  // Keep every saved assignment reserved so one fallback cannot displace another service.
+  const assigned=new Set([config.adminPort,...services.flatMap(d=>[d.port,d.backendPort])]);
+  async function assign(server,preferred,host,record,key) {
+    for(let offset=0;offset<64512;offset++) {
+      const candidate=1024+(preferred-1024+offset)%64512;
+      if(candidate!==preferred&&assigned.has(candidate))continue;
+      try {await listen(server,candidate,host);} catch(error) {
+        if(error.code==='EADDRINUSE')continue;
+        throw error;
+      }
+      if(candidate!==preferred) {
+        record[key]=candidate;
+        try {save(path.join(dir,'config.json'),config);} catch(error) {record[key]=preferred;await close(server);throw error;}
+        assigned.delete(preferred);assigned.add(candidate);
+        console.log(`Port ${preferred} occupied; saved replacement ${candidate}.`);
+      }
+      return candidate;
+    }
+    throw Error(`No available TCP port for ${preferred}.`);
+  }
   const logdir=path.join(dir,'logs'); fs.mkdirSync(logdir,{recursive:true,mode:0o700});
   const invalidate=id=>{for(const [key,s] of sessions) if(s.id===id)sessions.delete(key);};
   function status() {return {name:'Tech Hub',version:require('../package.json').version,adminPort:config.adminPort,startedAt,services:services.map(d=>({id:d.id,name:d.name,detail:d.detail,port:d.port,protected:!!config.services[d.id].password,localURL:`http://127.0.0.1:${d.port}`,urls:ips(config.host).map(ip=>`http://${ip}:${d.port}`),...states.get(d.id)}))};}
   for (const d of services) states.set(d.id,{state:'starting',error:null});
   const admin=http.createServer(async(req,res)=>{
-    if (![`127.0.0.1:${config.adminPort}`,`localhost:${config.adminPort}`].includes(req.headers.host) || !['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)) return send(res,403,{error:'Admin is available only on this Mac.'});
+    if (![`127.0.0.1:${config.adminPort}`,`localhost:${config.adminPort}`].includes(req.headers.host) || !['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)) return send(res,403,{error:'Admin is available only on this computer.'});
     try {
       if(req.method==='GET'&&req.url==='/api/status')return send(res,200,status());
       if(req.method==='GET'&&['/','/app.js','/style.css'].includes(req.url)) {
@@ -68,7 +89,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||path.join(os.homedir
       send(res,404,{error:'Not found'});
     } catch(error) {send(res,400,{error:error.message});}
   });
-  try {await listen(admin,config.adminPort,'127.0.0.1');servers.push(admin);} catch(error) {throw Error(`Master page port ${config.adminPort}: ${error.message}`);}
+  try {await assign(admin,config.adminPort,'127.0.0.1',config,'adminPort');servers.push(admin);} catch(error) {throw Error(`Master page port ${config.adminPort}: ${error.message}`);}
   for(const d of services) {
     const gateway=http.createServer(async(req,res)=>{
       try {
@@ -104,20 +125,20 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||path.join(os.homedir
       } catch(error){if(!res.headersSent)send(res,400,{error:error.message});else res.destroy();}
     });
     gateway.requestTimeout=15000;
-    try {await listen(gateway,d.port,config.host);servers.push(gateway);} catch(error){states.set(d.id,{state:'error',error:`Port ${d.port} is occupied or unavailable. Quit the other app or edit config.json and restart Tech Hub.`});continue;}
+    try {d.port=await assign(gateway,d.port,config.host,config.services[d.id],'port');servers.push(gateway);} catch(error){states.set(d.id,{state:'error',error:`Unable to assign web port ${d.port}: ${error.message}`});continue;}
     if(!launch){states.set(d.id,{state:'running',error:null});continue;}
     const reservation=http.createServer();
-    try {await listen(reservation,d.backendPort,'127.0.0.1');await close(reservation);} catch(error){states.set(d.id,{state:'error',error:`Internal port ${d.backendPort} is occupied. Quit the other app or edit config.json and restart.`});continue;}
+    try {d.backendPort=await assign(reservation,d.backendPort,'127.0.0.1',config.services[d.id],'backendPort');await close(reservation);} catch(error){states.set(d.id,{state:'error',error:`Unable to assign internal port ${d.backendPort}: ${error.message}`});continue;}
     const dataDir=path.join(dir,d.id);fs.mkdirSync(dataDir,{recursive:true,mode:0o700});
     const resources=process.env.TECH_HUB_RESOURCES||path.join(root,'build','resources');
     let command,args;
-    if(d.id==='dsan'){command=path.join(resources,'dsan','dsan-server');args=[];}
-    if(d.id==='power'){command=path.join(resources,'power-server');args=['--host','127.0.0.1','--port',String(d.backendPort),'--config',path.join(dataDir,'settings.json'),'--no-browser'];}
+    if(d.id==='dsan'){command=path.join(resources,'dsan',process.platform==='win32'?'dsan-server.exe':'dsan-server');args=[];}
+    if(d.id==='power'){command=path.join(resources,process.platform==='win32'?'power-server.exe':'power-server');args=['--host','127.0.0.1','--port',String(d.backendPort),'--config',path.join(dataDir,'settings.json'),'--no-browser'];}
     if(d.id==='lux'){command=process.execPath;args=[path.join(__dirname,'lux-server.cjs'),path.join(resources,'lux')];}
     const logPath=path.join(logdir,d.id+'.log');
     if(fs.existsSync(logPath)&&fs.statSync(logPath).size>5*1024*1024)fs.renameSync(logPath,logPath+'.previous');
     const log=fs.openSync(logPath,'a',0o600);
-    const child=spawn(command,args,{env:{...process.env,TECH_HUB_MANAGED:'1',TECH_HUB_VERSION:require('../package.json').version,TECH_HUB_PUBLIC_PORT:String(d.port),TECH_HUB_PUBLIC_HOST:config.host,TECH_HUB_BACKEND_PORT:String(d.backendPort),TECH_HUB_BACKEND_HOST:'127.0.0.1',TECH_HUB_DATA_DIR:dataDir,LNA_APP_SUPPORT:dataDir,LNA_MA_READER:path.join(resources,'MA Web Remote Reader.app','Contents','MacOS','MA Web Remote Reader')},stdio:['ignore',log,log]});fs.closeSync(log);children.push(child);
+    const child=spawn(command,args,{windowsHide:true,env:{...process.env,TECH_HUB_MANAGED:'1',TECH_HUB_VERSION:require('../package.json').version,TECH_HUB_PUBLIC_PORT:String(d.port),TECH_HUB_PUBLIC_HOST:config.host,TECH_HUB_BACKEND_PORT:String(d.backendPort),TECH_HUB_BACKEND_HOST:'127.0.0.1',TECH_HUB_DATA_DIR:dataDir,LNA_APP_SUPPORT:dataDir,LNA_MA_READER:process.platform==='darwin'?path.join(resources,'MA Web Remote Reader.app','Contents','MacOS','MA Web Remote Reader'):''},stdio:['ignore',log,log]});fs.closeSync(log);children.push(child);
     child.on('error',error=>states.set(d.id,{state:'error',error:error.message}));
     child.on('exit',(code,signal)=>{if(!stopping)states.set(d.id,{state:'error',error:`Service stopped (${signal||code}). See ${d.id}.log; quit and reopen Tech Hub to restart.`});});
     // Backend ports are preflighted; a child that fails its strict bind exits.
@@ -128,9 +149,10 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||path.join(os.homedir
       setTimeout(probe,300).unref();
     };setTimeout(probe,500).unref();
   }
+  try {save(path.join(dir,'runtime.json'),{pid:process.pid,adminPort:config.adminPort});} catch(error) {for(const child of children)child.kill();await Promise.all(servers.map(close));throw error;}
   const cleanup=setInterval(()=>{for(const[k,s]of sessions)if(s.expires<Date.now())sessions.delete(k);for(const[k,a]of attempts)if(a.until<Date.now())attempts.delete(k);},60000);cleanup.unref();
   async function stop(){if(stopping)return;stopping=true;clearInterval(cleanup);for(const child of children)if(child.pid&&child.exitCode===null&&child.signalCode===null)child.kill('SIGINT');await Promise.all(servers.map(close));await Promise.all(children.map(child=>(!child.pid||child.exitCode!==null||child.signalCode!==null)?Promise.resolve():new Promise(resolve=>{const timer=setTimeout(()=>{child.kill('SIGKILL');resolve();},3000);child.once('exit',()=>{clearTimeout(timer);resolve();});})));}
   return {status,stop,config};
 }
-if(require.main===module)startHub().then(hub=>{console.log(`TECH_HUB_READY http://127.0.0.1:${hub.config.adminPort}`);for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>hub.stop().then(()=>process.exit(0)));if(process.env.TECH_HUB_PARENT_PID){const parent=Number(process.env.TECH_HUB_PARENT_PID);setInterval(()=>{try{process.kill(parent,0);}catch{hub.stop().then(()=>process.exit(0));}},2000).unref();}}).catch(error=>{console.error(error.message);process.exitCode=1;});
-module.exports={startHub,loadConfig,hashPassword,verifyPassword,definitions};
+if(require.main===module)startHub().then(hub=>{console.log(`TECH_HUB_READY http://127.0.0.1:${hub.config.adminPort}`);if(process.env.TECH_HUB_STDIN_CONTROL==='1'){const lines=require('node:readline').createInterface({input:process.stdin});lines.on('line',line=>{if(line==='shutdown')hub.stop().then(()=>process.exit(0));});lines.on('close',()=>hub.stop().then(()=>process.exit(0)));}for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>hub.stop().then(()=>process.exit(0)));if(process.env.TECH_HUB_PARENT_PID){const parent=Number(process.env.TECH_HUB_PARENT_PID);setInterval(()=>{try{process.kill(parent,0);}catch{hub.stop().then(()=>process.exit(0));}},2000).unref();}}).catch(error=>{console.error(error.message);process.exitCode=1;});
+module.exports={defaultDataDir,startHub,loadConfig,hashPassword,verifyPassword,definitions};

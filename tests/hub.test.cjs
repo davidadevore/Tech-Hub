@@ -31,5 +31,30 @@ test('isolates services, protects admin and APIs, persists passwords, invalidate
  await hub.stop();hub=null;const reclaimed=http.createServer();await listen(reclaimed,c.adminPort);await close(reclaimed);
  }finally{await hub?.stop();await Promise.all(backends.map(close));fs.rmSync(dir,{recursive:true,force:true});}
 });
-test('occupied public port reports error without switching URLs or stopping other services',async()=>{const{dir,c}=setup(28900);const blocker=http.createServer();await listen(blocker,c.services.lux.port);let hub;try{hub=await startHub({dir,launch:false});const status=hub.status();assert.equal(status.services[1].state,'error');assert.equal(status.services[1].port,c.services.lux.port);assert.equal(status.services[0].state,'running');}finally{await hub?.stop();await close(blocker);fs.rmSync(dir,{recursive:true,force:true});}});
-test('occupied internal port cannot masquerade as a running bundled service',async()=>{const{dir,c}=setup(29000);const blocker=http.createServer((req,res)=>res.end('unrelated'));await listen(blocker,c.services.lux.backendPort);let hub;try{hub=await startHub({dir});assert.equal(hub.status().services[1].state,'error');assert.match(hub.status().services[1].error,/Internal port/);}finally{await hub?.stop();await close(blocker);fs.rmSync(dir,{recursive:true,force:true});}});
+test('occupied master and public ports move, preserve other assignments and persist across restart',async()=>{
+ const{dir,c}=setup(28900);const blockers=[http.createServer(),http.createServer()];let hub;
+ try{
+ await listen(blockers[0],c.adminPort);await listen(blockers[1],c.services.lux.port);
+ hub=await startHub({dir,launch:false});const selected=structuredClone(hub.config);
+ assert.notEqual(selected.adminPort,c.adminPort);assert.notEqual(selected.services.lux.port,c.services.lux.port);
+ assert.equal(selected.services.dsan.port,c.services.dsan.port);assert.equal(selected.services.power.port,c.services.power.port);
+ assert.equal(new Set([selected.adminPort,...Object.values(selected.services).flatMap(s=>[s.port,s.backendPort])]).size,7);
+ assert.equal((await fetch(`http://127.0.0.1:${selected.adminPort}/api/status`).then(r=>r.json())).adminPort,selected.adminPort);
+ assert.equal(hub.status().services[1].localURL,`http://127.0.0.1:${selected.services.lux.port}`);
+ assert.equal(hub.status().services[1].state,'running');assert.deepEqual(loadConfig(dir),selected);
+ assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'runtime.json'))),{pid:process.pid,adminPort:selected.adminPort});
+ await hub.stop();hub=null;await Promise.all(blockers.map(close));
+ hub=await startHub({dir,launch:false});assert.deepEqual(hub.config,selected);
+ }finally{await hub?.stop();await Promise.all(blockers.filter(b=>b.listening).map(close));fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('occupied internal port is replaced without treating unrelated listener as the backend',async()=>{
+ const{dir,c}=setup(29000);const blocker=http.createServer((req,res)=>res.end('unrelated'));let hub;
+ try{await listen(blocker,c.services.lux.backendPort);hub=await startHub({dir});
+ assert.notEqual(hub.config.services.lux.backendPort,c.services.lux.backendPort);
+ assert.equal(hub.config.services.power.backendPort,c.services.power.backendPort);
+ assert.notEqual(hub.status().services[1].state,'running');
+ assert.equal(loadConfig(dir).services.lux.backendPort,hub.config.services.lux.backendPort);
+ }finally{await hub?.stop();await close(blocker);fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('Windows default data is per-user LocalAppData',()=>{const {defaultDataDir}=require('../hub/server.cjs');assert.equal(defaultDataDir('win32',{LOCALAPPDATA:'/users/test/local'},'/users/test'),path.join('/users/test/local','Streamline','Tech Hub'));});

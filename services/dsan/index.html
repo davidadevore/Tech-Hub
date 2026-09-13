@@ -109,7 +109,8 @@
     .clock-left { justify-content: flex-end; }
     .clock-right { justify-content: flex-start; }
     .clock-digit { flex: 0 0 .6em; width: .6em; text-align: center; letter-spacing: 0; }
-    .clock-colon { display: block; width: .28em; text-align: center; letter-spacing: 0; }
+    /* Center the glyph itself: monospaced colons are wider than this fixed slot. */
+    .clock-colon { display: flex; justify-content: center; flex: 0 0 .28em; width: .28em; text-align: center; letter-spacing: 0; }
     .presenter-message { display: none; width: 100%; text-align: center; font-weight: 750; font-size: clamp(18px, 4vw, 72px); line-height: 1.1; overflow-wrap: anywhere; white-space: pre-wrap; }
     body.has-message .presenter-message { display: block; }
     body.has-message .fullscreen-stage { grid-template-rows: minmax(0, 1fr) 22% 24%; }
