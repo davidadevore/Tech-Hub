@@ -1,7 +1,7 @@
-Power Monitor now prefers Modbus TCP for DKM-411 meters, with a validated web-feed fallback. The dashboard shows the active reading source. Existing meters use automatic web identification before switching; the device editor also offers explicit Modbus or web-only modes, with configurable port and unit ID.
+D’san Ready now includes PerfectCue settings for **Display time (seconds)** and **Flash on multiple clicks**.
 
-Discovery searches a private IP range for compatible web interfaces, then validates every required Modbus measurement before enabling Add. Discovered PDs are added explicitly with Add and Save changes.
+Choose a duration from 0.1 to 60 seconds. Each click restarts the display timer across the dashboard, mobile view, and full-screen arrows. With flashing enabled, another click in the same direction while the arrow is lit briefly flashes it. Turn flashing off to keep the arrow steadily lit.
 
-New installations default to one-second polling. Existing intervals are preserved. Polling cycles do not overlap and may run slower if a meter takes longer to respond. This implementation issues only read requests.
+Existing settings retain the two-second display time and enabled flashing.
 
-Mac and Windows installers are included. Quit Tech Hub before updating. Saved settings survive updates. Windows builds are unsigned; Mac builds are ad-hoc signed.
+Mac and Windows installers are included. Quit Tech Hub before updating. Saved settings survive updates.

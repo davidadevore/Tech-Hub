@@ -8,6 +8,7 @@ import errno
 import hashlib
 import hmac
 import json
+import math
 import os
 import re
 import secrets
@@ -41,7 +42,7 @@ else:
 CONFIG_PATH = DATA_DIR / "viewer-config.json"
 DEFAULT_CONFIG = {
     "limitimer": {"host": "", "port": 6120, "enabled": False},
-    "perfectcue": {"host": "", "port": 6120, "enabled": False},
+    "perfectcue": {"host": "", "port": 6120, "enabled": False, "display_time_seconds": 2, "flash_on_multiple_clicks": True},
     "display": {"overtime": "continue", "font": "mono", "show_lights": True, "clock_color": "#f5f8fb", "green_color": "#35d07f", "yellow_color": "#ffd166", "red_color": "#ff5263", "fixed_color": True},
     "access": {
         "require_auth": False,
@@ -328,6 +329,21 @@ def validate_config(config: dict[str, Any], existing: dict[str, Any] | None = No
         if enabled and not host:
             raise ValueError(f"{name} IP address or hostname is required")
         clean[name] = {"host": host, "port": port, "enabled": enabled}
+    cue = config["perfectcue"]
+    previous_cue = (existing or DEFAULT_CONFIG)["perfectcue"]
+    duration = cue.get("display_time_seconds", previous_cue.get("display_time_seconds", 2))
+    if isinstance(duration, bool):
+        raise ValueError("PerfectCue display time must be between 0.1 and 60 seconds")
+    try:
+        duration = float(duration)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("PerfectCue display time must be a number") from exc
+    if not math.isfinite(duration) or not 0.1 <= duration <= 60:
+        raise ValueError("PerfectCue display time must be between 0.1 and 60 seconds")
+    flash = cue.get("flash_on_multiple_clicks", previous_cue.get("flash_on_multiple_clicks", True))
+    if not isinstance(flash, bool):
+        raise ValueError("PerfectCue flash on multiple clicks must be enabled or disabled")
+    clean["perfectcue"].update(display_time_seconds=duration, flash_on_multiple_clicks=flash)
     display = config.get("display", {})
     overtime = str(display.get("overtime", "continue")) if isinstance(display, dict) else "continue"
     if overtime not in ("continue", "stop"):

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — 2026-09-14
+
+- Added PerfectCue display time in seconds and a Flash on multiple clicks toggle.
+- Applied the saved settings to dashboard, mobile, and full-screen arrows; each click restarts the display timer.
+- Preserved two-second display and enabled flashing for existing settings.
+
 ## 0.3.0 — 2026-09-14
 
 - Added DKM-411 Modbus-first polling, validated register decoding, and HTTP live-feed fallback.

@@ -113,3 +113,7 @@ GitHub Actions builds and smoke-tests both platforms. A `v*` tag publishes both 
 ## Source origins
 
 Integrated from the user’s existing D’san Master View 0.3.3, Lux Link 0.4.0 workspace, and Power Monitor 2.10.0 sources. Tech Hub adds orchestration, per-service access gates, a native Mac menu-bar host, isolated storage, and combined packaging. Lux Link’s grandMA Web Remote screen reader uses macOS APIs and is Mac-only; Windows still reports console reachability and lighting-network traffic. The standalone D’san floating desktop widgets are not included; its browser dashboard and full-screen display are included. Device behavior still depends on the hardware, network interface, and permissions available on the host Mac.
+
+### PerfectCue display settings
+
+In D’san Ready → Settings → PerfectCue, set **Display time (seconds)** (0.1–60) and **Flash on multiple clicks**. Each click restarts the display time. Flashing applies to repeated clicks in the same direction while the arrow is lit. Settings apply to the dashboard, mobile view, and full-screen display. Existing installations default to two seconds with flashing enabled.

@@ -1,9 +1,13 @@
 import base64
 import errno
+from copy import deepcopy
+import tempfile
+from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
 
 from app import (
+    DEFAULT_CONFIG,
     LOCAL_PORT,
     SERVER_BIND_HOST,
     SHARED,
@@ -26,6 +30,32 @@ CAPTURED_FRAME = bytes.fromhex(
 
 
 class ProtocolTests(unittest.TestCase):
+    def test_cue_display_settings_validation_and_legacy_defaults(self):
+        config = deepcopy(DEFAULT_CONFIG)
+        config["perfectcue"].pop("display_time_seconds")
+        config["perfectcue"].pop("flash_on_multiple_clicks")
+        clean = validate_config(config)
+        self.assertEqual(clean["perfectcue"]["display_time_seconds"], 2)
+        self.assertTrue(clean["perfectcue"]["flash_on_multiple_clicks"])
+        for invalid in [0, -1, 61, "bad", float("nan"), float("inf"), True, None]:
+            config["perfectcue"]["display_time_seconds"] = invalid
+            with self.assertRaises(ValueError):
+                validate_config(config)
+        config["perfectcue"]["display_time_seconds"] = 0.25
+        config["perfectcue"]["flash_on_multiple_clicks"] = "false"
+        with self.assertRaises(ValueError):
+            validate_config(config)
+
+    def test_cue_display_settings_survive_restart(self):
+        with tempfile.TemporaryDirectory() as directory, patch("app.CONFIG_PATH", Path(directory) / "config.json"):
+            config = deepcopy(DEFAULT_CONFIG)
+            config["perfectcue"].update(display_time_seconds=3.5, flash_on_multiple_clicks=False)
+            SharedState().set_config(config)
+            restored = SharedState().config["perfectcue"]
+            self.assertEqual(restored["display_time_seconds"], 3.5)
+            self.assertFalse(restored["flash_on_multiple_clicks"])
+
+
     def test_presenter_message_validation_and_blank_start(self):
         self.assertEqual(SharedState().data['message']['text'], '')
         message = validate_message({'text': ' Wrap up ', 'color': '#ffcc00', 'flash': True})

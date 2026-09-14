@@ -403,7 +403,10 @@
         <div class="fields">
           <label><span>IP address or hostname</span><input id="perfectcue-host" type="text" autocomplete="off" placeholder="10.21.0.120"></label>
           <label><span>TCP port</span><input id="perfectcue-port" type="number" min="1" max="65535" inputmode="numeric"></label>
+          <label><span>Display time (seconds)</span><input id="perfectcue-display-time" type="number" min="0.1" max="60" step="any" required inputmode="decimal"></label>
         </div>
+        <label class="enable"><input type="checkbox" id="perfectcue-flash"> Flash on multiple clicks</label>
+        <p class="hint">Each click restarts the display time. Repeated clicks in the same direction flash when enabled.</p>
       </fieldset>
       <fieldset class="display-setting">
         <legend>Display</legend>
@@ -617,13 +620,15 @@
       $('mobile-cue-count').textContent = `${device.event_count} cue${device.event_count === 1 ? '' : 's'}`;
       const event = device.last_event;
       if (!event) return;
-      const signature = `${event.at}-${event.code}`;
+      const signature = `${device.event_count}-${event.at}-${event.code}`;
       if ($('cue-display').dataset.signature === signature) return;
       $('cue-display').dataset.signature = signature;
       const symbols = {blank_off: '⊘', blank_on: '⊘'};
       const now = Date.now();
       const directional = event.kind === 'next' || event.kind === 'previous';
-      const repeatedDirection = directional && event.kind === lastCueDirection && now < cueVisibleUntil;
+      const cueSettings = latestState?.config?.perfectcue;
+      const durationMs = (cueSettings?.display_time_seconds ?? 2) * 1000;
+      const repeatedDirection = cueSettings?.flash_on_multiple_clicks !== false && directional && event.kind === lastCueDirection && now < cueVisibleUntil;
       if (directional) lastCueDirection = event.kind;
       else lastCueDirection = null;
       if (arrows[event.kind]) $('cue-symbol').innerHTML = arrows[event.kind];
@@ -632,6 +637,9 @@
       $('cue-code').textContent = event.code;
       $('mobile-cue-label').textContent = `${event.label} · ${event.detail}`;
       $('mobile-cue-code').textContent = event.code;
+      // Restart the animation even when another click arrives during a flash.
+      $('cue-display').classList.remove('flash');
+      if (repeatedDirection) void $('cue-display').offsetWidth;
       const flashClass = repeatedDirection ? ' flash' : '';
       $('cue-display').className = `cue-display active ${event.kind}${flashClass}`;
       const directionArrows = [$('fullscreen-previous'), $('fullscreen-next'), $('mobile-previous'), $('mobile-next')];
@@ -641,9 +649,12 @@
           ? [$('fullscreen-next'), $('mobile-next')]
           : [$('fullscreen-previous'), $('mobile-previous')];
         activeArrows.forEach(arrow => arrow.classList.add('active'));
-        if (repeatedDirection) activeArrows.forEach(arrow => arrow.classList.add('flash'));
+        if (repeatedDirection) activeArrows.forEach(arrow => {
+          void arrow.offsetWidth;
+          arrow.classList.add('flash');
+        });
       }
-      cueVisibleUntil = now + 2000;
+      cueVisibleUntil = now + durationMs;
       clearTimeout(cueFlashTimer);
       if (repeatedDirection) cueFlashTimer = setTimeout(() => {
         $('cue-display').classList.remove('flash');
@@ -653,7 +664,7 @@
       cueTimer = setTimeout(() => {
         $('cue-display').classList.remove('active');
         directionArrows.forEach(arrow => arrow.classList.remove('active'));
-      }, 2000);
+      }, durationMs);
     }
 
     function renderNetworkInfo(network) {
@@ -688,6 +699,8 @@
         $(`${name}-port`).value = config[name].port;
         $(`${name}-enabled`).checked = config[name].enabled;
       });
+      $('perfectcue-display-time').value = config.perfectcue.display_time_seconds ?? 2;
+      $('perfectcue-flash').checked = config.perfectcue.flash_on_multiple_clicks !== false;
       $('overtime-mode').value = config.display?.overtime || 'continue';
       $('clock-font').value = config.display?.font || 'mono';
       $('show-lights').checked = config.display?.show_lights !== false;
@@ -829,6 +842,8 @@
       event.preventDefault();
       const payload = {};
       for (const name of ['limitimer', 'perfectcue']) payload[name] = {host: $(`${name}-host`).value.trim(), port: Number($(`${name}-port`).value), enabled: $(`${name}-enabled`).checked};
+      payload.perfectcue.display_time_seconds = Number($('perfectcue-display-time').value);
+      payload.perfectcue.flash_on_multiple_clicks = $('perfectcue-flash').checked;
       payload.display = {overtime: $('overtime-mode').value, font: $('clock-font').value, show_lights: $('show-lights').checked};
       payload.display.fixed_color = $('fixed-color').checked;
       for (const name of ['clock', 'green', 'yellow', 'red']) payload.display[`${name}_color`] = $(`${name}-color`).value;
