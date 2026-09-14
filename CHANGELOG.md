@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-09-14
+
+- Added DKM-411 Modbus-first polling, validated register decoding, and HTTP live-feed fallback.
+- Added automatic migration for web-identified DKM-411 meters, configurable polling source, Modbus port and unit ID, and reading-source indicators.
+- Required complete Modbus measurement validation before discovered PDs can be added.
+- Defaulted new installations to one-second non-overlapping polling; preserved existing refresh settings.
+
 ## 0.2.2 — 2026-09-14
 
 - Extended Power Monitor discovery with single-IP inspection, /24 and /23 scans, checked/open TCP ports, and live-reading previews.

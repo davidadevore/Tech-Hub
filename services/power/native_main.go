@@ -46,6 +46,9 @@ type Settings struct {
 }
 
 type Device struct {
+	PollingMode string  `json:"polling_mode"`
+	ModbusPort  int     `json:"modbus_port"`
+	ModbusUnit  int     `json:"modbus_unit"`
 	ID          string  `json:"id"`
 	Name        string  `json:"name"`
 	Address     string  `json:"address"`
@@ -131,6 +134,7 @@ type Capture struct {
 }
 
 type Record struct {
+	Source        string
 	Device        Device
 	Status        string
 	CheckedAt     string
@@ -154,6 +158,7 @@ type Record struct {
 }
 
 type fetchResult struct {
+	Source       string
 	Status       string
 	CheckedAt    string
 	LastSeen     string
@@ -177,7 +182,7 @@ type Store struct {
 }
 
 func defaultConfig() Config {
-	return Config{Version: 2, Settings: Settings{RefreshSeconds: 5, TimeoutSeconds: 2.5, MaxResponseKB: 512}, Devices: []Device{}, Services: []Service{}}
+	return Config{Version: 2, Settings: Settings{RefreshSeconds: 1, TimeoutSeconds: 2.5, MaxResponseKB: 512}, Devices: []Device{}, Services: []Service{}}
 }
 
 func loadStore(path string) (*Store, error) {
@@ -265,6 +270,22 @@ func validateConfig(config *Config) error {
 	urls := map[string]bool{}
 	for index := range config.Devices {
 		device := &config.Devices[index]
+		if device.PollingMode == "" {
+			device.PollingMode = "auto"
+		}
+		if device.PollingMode != "auto" && device.PollingMode != "modbus" && device.PollingMode != "http" {
+			return errors.New("Polling mode must be auto, modbus, or http.")
+		}
+		if device.ModbusPort == 0 {
+			device.ModbusPort = 502
+		}
+		if device.ModbusUnit == 0 {
+			device.ModbusUnit = 1
+		}
+		if device.ModbusPort < 1 || device.ModbusPort > 65535 || device.ModbusUnit < 1 || device.ModbusUnit > 240 {
+			return errors.New("Use a Modbus port from 1 to 65535 and unit ID from 1 to 240.")
+		}
+
 		device.DeviceType = strings.ToLower(strings.TrimSpace(device.DeviceType))
 		if device.DeviceType == "" {
 			device.DeviceType = "distro"
@@ -398,7 +419,7 @@ func (m *Monitor) syncRecords(config Config) {
 	defer m.mu.Unlock()
 	next := map[string]*Record{}
 	for _, device := range config.Devices {
-		if existing := m.records[device.ID]; existing != nil {
+		if existing := m.records[device.ID]; existing != nil && existing.Device.Address == device.Address && existing.Device.Port == device.Port && existing.Device.Scheme == device.Scheme && existing.Device.Path == device.Path && existing.Device.ModbusPort == device.ModbusPort && existing.Device.ModbusUnit == device.ModbusUnit {
 			existing.Device = device
 			next[device.ID] = existing
 		} else {
@@ -427,9 +448,10 @@ func (m *Monitor) RequestRefresh() {
 
 func (m *Monitor) loop() {
 	for {
+		started := time.Now()
 		m.runCycle()
 		interval := time.Duration(m.store.Get().Settings.RefreshSeconds * float64(time.Second))
-		timer := time.NewTimer(interval)
+		timer := time.NewTimer(max(time.Duration(0), interval-time.Since(started)))
 		select {
 		case <-timer.C:
 		case <-m.refresh:
@@ -455,8 +477,17 @@ func (m *Monitor) runCycle() {
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
-			result := fetchDevice(device, config.Settings)
-			m.apply(device.ID, result)
+			pollDevice := device
+			if device.PollingMode == "auto" || device.PollingMode == "" {
+				m.mu.RLock()
+				previous := m.records[device.ID]
+				if previous != nil && previous.Device.Address == device.Address && dkmTitle(previous.Title) {
+					pollDevice.PollingMode = "modbus"
+				}
+				m.mu.RUnlock()
+			}
+			result := fetchDevice(pollDevice, config.Settings)
+			m.apply(device.ID, result, device)
 		}()
 	}
 	wait.Wait()
@@ -745,11 +776,14 @@ func (record *Record) updatePeakCurrents(metrics []Metric, checkedAt string) {
 	}
 }
 
-func (m *Monitor) apply(id string, result fetchResult) {
+func (m *Monitor) apply(id string, result fetchResult, expected ...Device) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	record := m.records[id]
 	if record == nil {
+		return
+	}
+	if len(expected) > 0 && record.Device != expected[0] {
 		return
 	}
 	record.Status = result.Status
@@ -763,6 +797,7 @@ func (m *Monitor) apply(id string, result fetchResult) {
 	}
 	record.LastSeen = result.LastSeen
 	record.ContentType = result.ContentType
+	record.Source = result.Source
 	record.ContentBytes = result.ContentBytes
 	record.Truncated = result.Truncated
 	record.Title = result.Title
@@ -804,7 +839,7 @@ func (m *Monitor) publicRecord(record *Record) map[string]any {
 		"scheme": record.Device.Scheme, "port": record.Device.Port, "path": record.Device.Path,
 		"url": deviceURL(record.Device), "status": record.Status, "checked_at": nilIfEmpty(record.CheckedAt),
 		"last_seen": nilIfEmpty(record.LastSeen), "response_ms": record.ResponseMS, "http_status": nilIfZero(record.HTTPStatus),
-		"content_type": record.ContentType, "content_bytes": record.ContentBytes, "truncated": record.Truncated,
+		"reading_source": record.Source, "content_type": record.ContentType, "content_bytes": record.ContentBytes, "truncated": record.Truncated,
 		"error": record.Error, "title": record.Title, "metrics": record.Metrics, "phase_alerts": record.PhaseAlerts,
 		"peak_currents": record.ObservedPeaks, "observed_peaks": record.ObservedPeaks, "meter_demand": record.MeterDemand,
 		"history": record.History, "fields": fields, "stale": record.Stale, "has_capture": record.Capture != nil,
@@ -1017,7 +1052,7 @@ func fetchLive(client *http.Client, source, pageAddress string, limit int) ([]Me
 	return metrics, fields, map[string]any{"url": feedURL.String(), "raw_xml": string(body), "values": values, "metrics": metrics, "fields": fields}, nil
 }
 
-func fetchDevice(device Device, settings Settings) fetchResult {
+func fetchDeviceHTTP(device Device, settings Settings) fetchResult {
 	started := time.Now()
 	checked := nowString()
 	result := fetchResult{Status: "offline", CheckedAt: checked, Metrics: []Metric{}, PhaseAlerts: []string{}, Fields: []Field{}}
@@ -1429,9 +1464,9 @@ func probeDiscoveryAddress(ctx context.Context, address string, inspect bool) ma
 		result["measurement_source"] = "http://" + address + "/scd.xml"
 	}
 	if inspect {
-		return inspectDiscoveryPorts(ctx, address, result)
+		result = inspectDiscoveryPorts(ctx, address, result)
 	}
-	return result
+	return verifyDiscoveryModbus(ctx, address, result)
 }
 
 func discoverDevices(ctx context.Context, config Config, requested string) (map[string]any, error) {

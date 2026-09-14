@@ -1,5 +1,7 @@
-Power Monitor now supports single-IP inspection and /24 or /23 device discovery. Results show common open TCP ports, the validated DKM-411 web feed, sample readings, and a read-only Modbus check on port 502 (unit 1). Open ports are distinguished from verified data. Add discovered devices explicitly with Add and Save changes.
+Power Monitor now prefers Modbus TCP for DKM-411 meters, with a validated web-feed fallback. The dashboard shows the active reading source. Existing meters use automatic web identification before switching; the device editor also offers explicit Modbus or web-only modes, with configurable port and unit ID.
 
-The power monitor continues using the HTTP measurement feed. Port checks are bounded; UDP/SNMP and full-range port scanning are not included. Both Mac and Windows installers include the new discovery tool.
+Discovery searches a private IP range for compatible web interfaces, then validates every required Modbus measurement before enabling Add. Discovered PDs are added explicitly with Add and Save changes.
 
-Quit Tech Hub before replacing the app. Saved settings survive updates. Windows builds are unsigned; Mac builds are ad-hoc signed.
+New installations default to one-second polling. Existing intervals are preserved. Polling cycles do not overlap and may run slower if a meter takes longer to respond. This implementation issues only read requests.
+
+Mac and Windows installers are included. Quit Tech Hub before updating. Saved settings survive updates. Windows builds are unsigned; Mac builds are ad-hoc signed.

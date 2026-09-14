@@ -268,7 +268,7 @@ function phaseMetricMarkup(metrics, stale, phaseAlerts, observedPeaks = {}, mete
         </div>
       </section>
       <section class="phase-section peak-demand-section observed-peak-section">
-        <div class="peak-demand-heading"><h3>Highest observed this session</h3><div><span>Simultaneous readings captured by Power Monitor</span></div></div>
+        <div class="peak-demand-heading"><h3>Highest observed this session</h3><div><span>Readings captured in one polling cycle</span></div></div>
         <div class="peak-demand-values">
           ${readingCell("L1", observedPeaks, "l1_current")}${readingCell("L2", observedPeaks, "l2_current")}${readingCell("L3", observedPeaks, "l3_current")}
         </div>
@@ -307,7 +307,7 @@ function deviceCardMarkup(device) {
   const metrics = Array.isArray(device.metrics) ? device.metrics : [];
   const fields = (Array.isArray(device.fields) ? device.fields : []).slice(0, 3);
   const checked = device.checked_at ? `Checked ${formatTime(device.checked_at)}` : "Waiting for first check";
-  const technical = [device.http_status ? `HTTP ${device.http_status}` : "", device.response_ms != null ? `${device.response_ms} ms` : ""].filter(Boolean).join(" · ");
+  const technical = [device.reading_source || "", device.http_status ? `HTTP ${device.http_status}` : "", device.response_ms != null ? `${device.response_ms} ms` : ""].filter(Boolean).join(" · ");
   return `
     <article class="device-card status-${escapeHTML(device.status)}" data-device-id="${escapeHTML(device.id)}">
       <header class="card-header">
@@ -490,15 +490,15 @@ function renderDiscoveryResults() {
   const draftAddresses = new Set(state.deviceDraft.map((device) => device.address));
   results.innerHTML = state.discoveryResults.map((device) => {
     const added = device.already_configured || draftAddresses.has(device.address);
-    const compatible = device.compatible !== false;
+    const compatible = device.compatible !== false && device.modbus_verified === true;
     const evidence = device.evidence || {};
     const identity = [device.confidence === "confirmed" ? `Confirmed from live feed (${evidence.scada_value_count || 0} values)` : compatible ? "Probable — live feed did not validate" : "No compatible power feed identified", evidence.http_server ? `Server ${evidence.http_server}` : "", evidence.modbus_tcp_open ? "TCP 502 open" : "", device.serial ? `Serial ${device.serial}` : "", device.mac ? `MAC ${device.mac}` : "", device.retried ? "Found on slow retry" : ""].filter(Boolean).join(" · ");
     const ports = `Open TCP ports: ${(device.open_ports || []).join(", ") || "none responded"}. Checked: ${(device.checked_ports || []).join(", ")}.`;
-    const readings = (device.measurements || []).filter(m => ["l1_voltage","l2_voltage","l3_voltage","l1_current","l2_current","l3_current","frequency"].includes(m.key)).map(m => `${m.label}: ${m.value} ${m.unit}`).join(" · ");
+    const readings = (device.modbus_measurements || device.measurements || []).filter(m => ["l1_voltage","l2_voltage","l3_voltage","l1_current","l2_current","l3_current","frequency"].includes(m.key)).map(m => `${m.label}: ${m.value} ${m.unit}`).join(" · ");
     return `<div class="discovery-result">
-      <div><strong>${escapeHTML(device.address)} <span class="discovery-confidence ${escapeHTML(device.confidence || "probable")}">${escapeHTML(device.confidence || "probable")}</span></strong><small>${escapeHTML(`${device.manufacturer || "Unknown device"} ${device.model || ""}`)} · ${escapeHTML(device.title || "No web identification")}${identity ? `<br>${escapeHTML(identity)}` : ""}<br>${escapeHTML(ports)}${device.modbus_probe ? `<br>${escapeHTML(device.modbus_probe)}` : ""}${device.measurement_source ? `<br>Live feed: ${escapeHTML(device.measurement_source)}` : ""}${readings ? `<br>Sample readings: ${escapeHTML(readings)}` : ""}</small></div>
+      <div><strong>${escapeHTML(device.address)} <span class="discovery-confidence ${escapeHTML(device.confidence || "probable")}">${escapeHTML(device.confidence || "probable")}</span></strong><small>${escapeHTML(`${device.manufacturer || "Unknown device"} ${device.model || ""}`)} · ${escapeHTML(device.title || "No web identification")}${identity ? `<br>${escapeHTML(identity)}` : ""}<br>${escapeHTML(ports)}${device.modbus_probe ? `<br>${escapeHTML(device.modbus_probe)}` : ""}${device.measurement_source ? `<br>Live feed: ${escapeHTML(device.measurement_source)}` : ""}${readings ? `<br>${device.modbus_measurements ? "Modbus" : "Web"} sample readings: ${escapeHTML(readings)}` : ""}</small></div>
       <select data-discovery-type="${escapeHTML(device.address)}" ${added || !compatible ? "disabled" : ""}><option value="distro">Power distro</option><option value="cam_split">Cam split</option></select>
-      <button class="button button-secondary" type="button" data-add-discovery="${escapeHTML(device.address)}" ${added || !compatible ? "disabled" : ""}>${added ? "Added" : compatible ? "Add" : "Unsupported"}</button>
+      <button class="button button-secondary" type="button" data-add-discovery="${escapeHTML(device.address)}" ${added || !compatible ? "disabled" : ""}>${added ? "Added" : compatible ? "Add" : "Not verified"}</button>
     </div>`;
   }).join("");
 }
@@ -518,7 +518,7 @@ async function discoverDevices() {
     state.discoveryResults = result.devices || [];
     if (result.networks?.length) $("#discovery-subnet").value = result.networks[0].replace(/\/32$/, "");
     renderDiscoveryResults();
-    const count = state.discoveryResults.filter(d => d.compatible !== false).length;
+    const count = state.discoveryResults.filter(d => d.modbus_verified === true).length;
     showToast(count ? `Found ${plural(count, "compatible device")}.` : "Inspection complete — no compatible power feed found.");
   } catch (error) {
     $("#discovery-results").innerHTML = "";
@@ -532,11 +532,11 @@ async function discoverDevices() {
 function addDiscoveredDevice(address) {
   if (state.deviceDraft.some((device) => device.address === address)) return;
   const result = state.discoveryResults.find((device) => device.address === address);
-  if (!result || result.compatible === false) return;
+  if (!result || result.modbus_verified !== true) return;
   const type = $$('[data-discovery-type]', $("#discovery-results")).find((select) => select.dataset.discoveryType === address)?.value || "distro";
   state.deviceDraft.push({
     id: newDeviceId(), name: result?.serial ? `DKM411 ${result.serial}` : "", address, scheme: "http", port: 80, path: "/",
-    breaker_amps: null, device_type: type,
+    breaker_amps: null, device_type: type, polling_mode: "modbus", modbus_port: 502, modbus_unit: 1,
   });
   renderConfiguredDevices();
   renderDiscoveryResults();
@@ -549,6 +549,9 @@ function editDevice(deviceId) {
   $("#device-id").value = device.id;
   $("#device-name").value = device.name;
   $("#device-address").value = device.address;
+  $("#device-polling-mode").value = device.polling_mode || "auto";
+  $("#device-modbus-port").value = device.modbus_port || 502;
+  $("#device-modbus-unit").value = device.modbus_unit || 1;
   $("#device-scheme").value = device.scheme;
   $("#device-port").value = device.port;
   $("#device-path").value = device.path;
@@ -568,6 +571,7 @@ function stageDevice(event) {
     id,
     name: $("#device-name").value.trim(),
     address: $("#device-address").value.trim(),
+    polling_mode: $("#device-polling-mode").value, modbus_port: Number($("#device-modbus-port").value), modbus_unit: Number($("#device-modbus-unit").value),
     scheme: $("#device-scheme").value,
     port: Number($("#device-port").value),
     path: $("#device-path").value.trim() || "/",
@@ -766,7 +770,7 @@ function diagnosticsOverview(data) {
   const metrics = capture.metrics || [];
   return `
     <div class="diagnostic-summary">
-      <div class="diagnostic-stat"><span>HTTP response</span><strong>${escapeHTML(device.http_status || "—")}</strong></div>
+      <div class="diagnostic-stat"><span>Reading source</span><strong>${escapeHTML(device.reading_source || "Web feed")}</strong></div>
       <div class="diagnostic-stat"><span>Response time</span><strong>${device.response_ms == null ? "—" : `${escapeHTML(device.response_ms)} ms`}</strong></div>
       <div class="diagnostic-stat"><span>Page size</span><strong>${escapeHTML(Math.round((device.content_bytes || 0) / 1024))} KB${device.truncated ? " (limited)" : ""}</strong></div>
       <div class="diagnostic-stat"><span>Extracted items</span><strong>${escapeHTML(fields.length)}</strong></div>
@@ -805,7 +809,7 @@ function renderDiagnosticsTab() {
     const capture = state.diagnostics.capture;
     const pre = document.createElement("pre");
     pre.className = "raw-capture";
-    pre.textContent = capture?.raw_html || "No raw page has been captured from this device yet.";
+    pre.textContent = capture?.live_feed?.protocol === "modbus-tcp" ? JSON.stringify(capture.live_feed, null, 2) : capture?.raw_html || "No raw page has been captured from this device yet.";
     body.append(pre);
   }
 }

@@ -54,20 +54,7 @@ func inspectDiscoveryPorts(ctx context.Context, address string, result map[strin
 		}
 	}
 	result["checked_ports"], result["open_ports"] = inspectionPorts, open
-	result["modbus_probe"] = "Not verified; an open port alone does not identify its protocol."
-	if result["compatible"] == true {
-		for _, port := range open {
-			if port == 502 {
-				value, err := discoveryModbusVoltage(ctx, address)
-				if err == nil {
-					result["modbus_probe"] = "Verified read-only Modbus response (unit 1)."
-					result["modbus_l1_voltage"] = value
-				} else {
-					result["modbus_probe"] = "Port 502 open; unit 1 read did not validate. The unit address may differ."
-				}
-			}
-		}
-	}
+
 	return result
 }
 
@@ -99,4 +86,17 @@ func parseDiscoveryModbusVoltage(reply []byte) (float64, error) {
 		return 0, errors.New("invalid Modbus read response")
 	}
 	return float64(uint32(binary.BigEndian.Uint16(reply[11:13]))<<16|uint32(binary.BigEndian.Uint16(reply[9:11]))) / 10, nil
+}
+
+func verifyDiscoveryModbus(ctx context.Context, address string, result map[string]any) map[string]any {
+	result["modbus_verified"] = false
+	sample, err := fetchModbusContext(ctx, Device{Address: address, ModbusPort: 502, ModbusUnit: 1}, Settings{TimeoutSeconds: 2.5})
+	if err != nil {
+		result["modbus_probe"] = "Required Modbus readings did not validate on port 502, unit 1. Check the device settings before adding."
+		return result
+	}
+	result["modbus_verified"] = true
+	result["modbus_probe"] = "Verified required Modbus measurements (port 502, unit 1)."
+	result["modbus_measurements"] = sample.Metrics
+	return result
 }

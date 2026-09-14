@@ -121,7 +121,7 @@
         <section class="configured-devices" aria-labelledby="configured-title">
           <div class="section-heading"><h3 id="configured-title">Configured devices</h3><span id="configured-count">0 devices</span></div>
           <div class="discovery-panel">
-            <div><strong>Discover network devices</strong><small>Inspect one IP for common open TCP ports and live power data, or discover DKM411 devices across a private /24 or /23 range.</small></div>
+            <div><strong>Discover network devices</strong><small>Inspect one IP for common open TCP ports and live power data, or search a private /24 or /23 range. Add is enabled only after the DKM411 web identity and required Modbus readings validate.</small></div>
             <div class="discovery-controls"><input id="discovery-subnet" aria-label="Device IP or network range" placeholder="Device IP or private /24 or /23 range" autocomplete="off"><button class="button button-secondary" id="discover-button" type="button">Discover</button></div>
             <div class="discovery-results" id="discovery-results" aria-live="polite"></div>
           </div>
@@ -153,7 +153,13 @@
             </label>
             <div class="field-row">
               <label class="field">
-                <span>Connection type</span>
+                <span>Polling source</span>
+              <select id="device-polling-mode"><option value="auto">Auto — prefer Modbus for DKM-411</option><option value="modbus">DKM-411 Modbus + web fallback</option><option value="http">Web feed only</option></select>
+            </label>
+            <label class="field"><span>Modbus port</span><input id="device-modbus-port" type="number" min="1" max="65535" value="502" required></label>
+            <label class="field"><span>Modbus unit ID</span><input id="device-modbus-unit" type="number" min="1" max="240" value="1" required></label>
+            <label class="field">
+              <span>Web fallback connection</span>
                 <select id="device-scheme"><option value="http">HTTP</option><option value="https">HTTPS</option></select>
               </label>
               <label class="field">

@@ -42,9 +42,13 @@ At startup, Tech Hub tries each saved TCP port. If another application occupies 
 
 Open **Power Monitor → Manage devices → Discover network devices**. Enter one private IP address to inspect that device, or an explicit `/24` or `/23` range to find compatible DKM-411 meters. A bare IP inspects only that address.
 
-Results show identity, checked/open TCP ports, a validated HTTP live-feed address, and sample power readings. For recognized DKM-411 devices, single-IP inspection also sends one read-only Modbus request on port 502 using unit ID 1. It never changes device registers. A successful connection alone is labeled as an open port, not proof of a working protocol. Other Modbus unit IDs are not automatically tried.
+Results show identity, checked/open TCP ports, a validated HTTP live-feed address, and sample power readings. For recognized DKM-411 devices, discovery validates the complete required measurement set using read-only Modbus requests on port 502, unit ID 1. It never changes device registers. A successful connection alone is labeled as an open port, not proof of a working protocol. Other Modbus unit IDs are not automatically tried.
 
-Choose **Add**, then **Save changes**, to start monitoring a compatible result. Discovery does not automatically add devices. The monitor uses the HTTP feed; the Modbus read is a diagnostic check, not a new polling mode.
+**Add** is enabled only when the web identity matches a DKM-411 and all required Modbus readings validate. Choose **Add**, then **Save changes**, to start monitoring a verified result. Discovery does not automatically add devices. Discovered units use Modbus TCP as their primary polling source, with the HTTP live feed as a fallback. The dashboard and diagnostics show the active source. If both sources fail, readings are marked offline/stale rather than presented as new data.
+
+Existing devices default to **Auto**: the first successful web check identifies DKM-411 meters, then subsequent cycles prefer Modbus. Other devices remain on HTTP. In the device editor, choose **DKM-411 Modbus + web fallback**, **Auto**, or **Web feed only**, and set the Modbus port and unit ID. The DKM-411 register map is model-specific; do not select it for unrelated meters.
+
+New installations poll every second. Existing refresh settings are preserved; select **1 second** under Auto refresh if desired. Each cycle reads the phase/neutral currents, voltages, frequency, power, power factor, and demand registers. Cycles never overlap and may take longer on a slow or unresponsive meter. No Modbus write functions are used.
 
 Single-IP inspection checks TCP ports 21, 22, 23, 53, 80, 81, 443, 502, 8080, 8081, 8443, and 10001. Network discovery checks HTTP 80 and TCP 502 on matching devices. These are bounded checks, not an exhaustive port scan; UDP/SNMP and alternative web-port fingerprints are not included.
 
