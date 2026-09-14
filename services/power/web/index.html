@@ -121,8 +121,8 @@
         <section class="configured-devices" aria-labelledby="configured-title">
           <div class="section-heading"><h3 id="configured-title">Configured devices</h3><span id="configured-count">0 devices</span></div>
           <div class="discovery-panel">
-            <div><strong>Discover network devices</strong><small>Scans one private /23 range (510 addresses) for compatible DKM411 devices.</small></div>
-            <div class="discovery-controls"><input id="discovery-subnet" placeholder="10.1.0.0/23" autocomplete="off"><button class="button button-secondary" id="discover-button" type="button">Discover</button></div>
+            <div><strong>Discover network devices</strong><small>Inspect one IP for common open TCP ports and live power data, or discover DKM411 devices across a private /24 or /23 range.</small></div>
+            <div class="discovery-controls"><input id="discovery-subnet" aria-label="Device IP or network range" placeholder="Device IP or private /24 or /23 range" autocomplete="off"><button class="button button-secondary" id="discover-button" type="button">Discover</button></div>
             <div class="discovery-results" id="discovery-results" aria-live="polite"></div>
           </div>
           <div class="configured-list" id="configured-list"></div>

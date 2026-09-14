@@ -1,5 +1,5 @@
-Tech Hub now supports Windows x64 with a native system-tray app. Its TH menu includes Open Control Page, Check for Updates, Open Logs, and Quit Tech Hub. All three services are bundled; no separate runtimes are required. Quitting or terminating the tray host stops its service processes.
+Power Monitor now supports single-IP inspection and /24 or /23 device discovery. Results show common open TCP ports, the validated DKM-411 web feed, sample readings, and a read-only Modbus check on port 502 (unit 1). Open ports are distinguished from verified data. Add discovered devices explicitly with Add and Save changes.
 
-Both platforms include automatic TCP port reassignment with saved assignments, Streamline colors, clearer Set password controls, and the corrected D’san countdown colon.
+The power monitor continues using the HTTP measurement feed. Port checks are bounded; UDP/SNMP and full-range port scanning are not included. Both Mac and Windows installers include the new discovery tool.
 
-Download the Windows Setup EXE or Apple silicon Mac DMG below. Quit Tech Hub before updating; saved device settings and passwords survive updates. The Windows installer is unsigned; the Mac app is ad-hoc signed. Lux Link’s grandMA screen metadata reader remains Mac-only; Windows still supports console reachability and network monitoring. These are local HTTP dashboards intended for trusted show networks.
+Quit Tech Hub before replacing the app. Saved settings survive updates. Windows builds are unsigned; Mac builds are ad-hoc signed.

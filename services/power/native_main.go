@@ -1191,15 +1191,15 @@ func normalizeDiscoveryNetwork(value string) (*net.IPNet, error) {
 	if regexp.MustCompile(`^\d{1,3}(?:\.\d{1,3}){2}$`).MatchString(raw) {
 		raw += ".0/23"
 	} else if !strings.Contains(raw, "/") {
-		raw += "/23"
+		raw += "/32"
 	}
 	_, network, err := net.ParseCIDR(raw)
 	if err != nil {
-		return nil, errors.New("Discovery range must look like 10.1.0.0/23, 10.1.1.218, or 10.1.1.")
+		return nil, errors.New("Enter a private IPv4 address or a /24 or /23 range.")
 	}
 	ones, bits := network.Mask.Size()
-	if bits != 32 || ones != 23 {
-		return nil, errors.New("Discovery is limited to a private IPv4 /23 network.")
+	if bits != 32 || (ones != 23 && ones != 24 && ones != 32) {
+		return nil, errors.New("Discovery supports one private IPv4 address, /24, or /23 network.")
 	}
 	if !network.IP.IsPrivate() && !network.IP.IsLinkLocalUnicast() {
 		return nil, errors.New("Discovery is limited to private local networks.")
@@ -1221,7 +1221,7 @@ func discoveryNetworks(config Config, requested string) ([]*net.IPNet, error) {
 		if ip == nil || ip.To4() == nil || (!ip.IsPrivate() && !ip.IsLinkLocalUnicast()) {
 			return
 		}
-		network, _ := normalizeDiscoveryNetwork(ip.String())
+		network, _ := normalizeDiscoveryNetwork(ip.String() + "/23")
 		found[network.String()] = network
 	}
 	for _, device := range config.Devices {
@@ -1261,8 +1261,13 @@ func discoveryNetworks(config Config, requested string) ([]*net.IPNet, error) {
 
 func discoveryAddresses(network *net.IPNet) []string {
 	base := binary.BigEndian.Uint32(network.IP.To4())
-	addresses := make([]string, 0, 510)
-	for offset := uint32(1); offset <= 510; offset++ {
+	ones, _ := network.Mask.Size()
+	first, last := uint32(1), uint32(1<<(32-ones))-2
+	if ones == 32 {
+		first, last = 0, 0
+	}
+	addresses := []string{}
+	for offset := first; offset <= last; offset++ {
 		ip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(ip, base+offset)
 		addresses = append(addresses, ip.String())
@@ -1355,14 +1360,14 @@ func discoveryFingerprint(homeStatus int, homeHeaders map[string]string, homeBod
 		confidence = "confirmed"
 	}
 	return map[string]any{
-		"title": title, "manufacturer": "Datakom", "model": "DKM-411", "confidence": confidence,
+		"compatible": true, "title": title, "manufacturer": "Datakom", "model": "DKM-411", "confidence": confidence,
 		"evidence": map[string]any{"http_title": title, "http_server": homeHeaders["server"], "scada_xml_validated": xmlValid, "scada_value_count": valueCount, "modbus_tcp_open": modbusOpen},
 	}
 }
 
-func discoveryPortOpen(ctx context.Context, address string) bool {
+func discoveryPortOpen(ctx context.Context, address string, port int) bool {
 	dialer := net.Dialer{Timeout: 300 * time.Millisecond}
-	connection, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(address, "502"))
+	connection, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(address, strconv.Itoa(port)))
 	if err != nil {
 		return false
 	}
@@ -1381,7 +1386,7 @@ func discoveryNeighborMAC(ctx context.Context, address string) string {
 	return strings.ToUpper(strings.ReplaceAll(string(match), "-", ":"))
 }
 
-func probeDiscoveryAddress(ctx context.Context, address string) map[string]any {
+func probeDiscoveryAddress(ctx context.Context, address string, inspect bool) map[string]any {
 	homeStatus := 0
 	homeHeaders := map[string]string{}
 	homeBody := []byte{}
@@ -1400,15 +1405,32 @@ func probeDiscoveryAddress(ctx context.Context, address string) map[string]any {
 	}
 	preliminary := discoveryFingerprint(homeStatus, homeHeaders, homeBody, 0, nil, false)
 	if preliminary == nil {
-		return nil
+		if !inspect {
+			return nil
+		}
+		return inspectDiscoveryPorts(ctx, address, map[string]any{"address": address, "compatible": false, "confidence": "unrecognized", "title": pageTitle(string(homeBody)), "measurements": []Metric{}})
 	}
 	xmlStatus, _, xmlBody, _ := discoveryHTTPGet(ctx, address, "/scd.xml", 2*time.Second, 64*1024)
-	result := discoveryFingerprint(homeStatus, homeHeaders, homeBody, xmlStatus, xmlBody, discoveryPortOpen(ctx, address))
+	result := discoveryFingerprint(homeStatus, homeHeaders, homeBody, xmlStatus, xmlBody, discoveryPortOpen(ctx, address, 502))
 	serial := ""
 	if match := regexp.MustCompile(`(?i)(?:serial(?:\s+(?:number|no\.?))?|s/n)\s*[:=#"'<>\s-]{1,24}([A-Z0-9._:-]{4,48})`).FindStringSubmatch(string(homeBody)); len(match) > 1 {
 		serial = match[1]
 	}
 	result["address"], result["serial"], result["mac"], result["retried"] = address, serial, discoveryNeighborMAC(ctx, address), retried
+	result["checked_ports"] = []int{80, 502}
+	openPorts := []int{80}
+	if result["evidence"].(map[string]any)["modbus_tcp_open"] == true {
+		openPorts = append(openPorts, 502)
+	}
+	result["open_ports"] = openPorts
+	result["measurements"] = []Metric{}
+	if result["confidence"] == "confirmed" {
+		result["measurements"] = discoveryMeasurements(xmlBody)
+		result["measurement_source"] = "http://" + address + "/scd.xml"
+	}
+	if inspect {
+		return inspectDiscoveryPorts(ctx, address, result)
+	}
 	return result
 }
 
@@ -1449,7 +1471,7 @@ func discoverDevices(ctx context.Context, config Config, requested string) (map[
 						return
 					}
 				}
-				if result := probeDiscoveryAddress(ctx, address); result != nil {
+				if result := probeDiscoveryAddress(ctx, address, len(addresses) == 1); result != nil {
 					result["already_configured"] = configured[address]
 					select {
 					case results <- result:
@@ -1485,7 +1507,7 @@ func discoverDevices(ctx context.Context, config Config, requested string) (map[
 	sort.Slice(found, func(left, right int) bool {
 		return binary.BigEndian.Uint32(net.ParseIP(found[left]["address"].(string)).To4()) < binary.BigEndian.Uint32(net.ParseIP(found[right]["address"].(string)).To4())
 	})
-	return map[string]any{"networks": networkNames, "devices": found}, nil
+	return map[string]any{"networks": networkNames, "devices": found, "scanned_addresses": len(addresses)}, nil
 }
 
 func writeJSON(writer http.ResponseWriter, status int, value any) {

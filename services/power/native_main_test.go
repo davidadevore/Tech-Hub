@@ -99,16 +99,29 @@ func TestAlertsRequireThreeConsecutiveReadings(t *testing.T) {
 	}
 }
 
-func TestDiscoveryNormalizesToPrivate23(t *testing.T) {
-	network, err := normalizeDiscoveryNetwork("10.1.1.218")
-	if err != nil || network.String() != "10.1.0.0/23" {
-		t.Fatalf("expected 10.1.0.0/23, got %v (%v)", network, err)
+// Synthetic RFC1918 addresses used only for target-normalization tests.
+func TestDiscoveryTargetsAreBoundedAndPrivate(t *testing.T) {
+	for _, item := range []struct {
+		input, network, first, last string
+		count                       int
+	}{
+		{"172.20.11.45", "172.20.11.45/32", "172.20.11.45", "172.20.11.45", 1},
+		{"172.20.11.45/24", "172.20.11.0/24", "172.20.11.1", "172.20.11.254", 254},
+		{"172.20.11.45/23", "172.20.10.0/23", "172.20.10.1", "172.20.11.254", 510},
+	} {
+		network, err := normalizeDiscoveryNetwork(item.input)
+		if err != nil || network.String() != item.network {
+			t.Fatalf("%s: %v %v", item.input, network, err)
+		}
+		addresses := discoveryAddresses(network)
+		if len(addresses) != item.count || addresses[0] != item.first || addresses[len(addresses)-1] != item.last {
+			t.Fatalf("wrong addresses: %v", addresses)
+		}
 	}
-	if _, err := normalizeDiscoveryNetwork("10.1.1.0/24"); err == nil {
-		t.Fatal("expected /24 discovery range to be rejected")
-	}
-	if addresses := discoveryAddresses(network); len(addresses) != 510 || addresses[0] != "10.1.0.1" || addresses[509] != "10.1.1.254" {
-		t.Fatalf("unexpected /23 host list: %d %#v %#v", len(addresses), addresses[0], addresses[len(addresses)-1])
+	for _, input := range []string{"8.8.8.8", "127.0.0.1", "10.1.0.0/16", "10.1.1.1/31", "::1", "not-an-ip"} {
+		if _, err := normalizeDiscoveryNetwork(input); err == nil {
+			t.Fatalf("accepted %s", input)
+		}
 	}
 }
 

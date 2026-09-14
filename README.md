@@ -38,6 +38,16 @@ For another computer, replace `127.0.0.1` with the Tech Hub computer’s LAN IP.
 
 At startup, Tech Hub tries each saved TCP port. If another application occupies it, Tech Hub binds an available replacement and saves it for future launches. This applies to the master page, service URLs, and internal web servers. The master page and desktop menus follow the actual assignments. Check the master page for updated URLs after a conflict; previously shared URLs may change. Lighting protocol UDP ports remain fixed.
 
+## Power device discovery
+
+Open **Power Monitor → Manage devices → Discover network devices**. Enter one private IP address to inspect that device, or an explicit `/24` or `/23` range to find compatible DKM-411 meters. A bare IP inspects only that address.
+
+Results show identity, checked/open TCP ports, a validated HTTP live-feed address, and sample power readings. For recognized DKM-411 devices, single-IP inspection also sends one read-only Modbus request on port 502 using unit ID 1. It never changes device registers. A successful connection alone is labeled as an open port, not proof of a working protocol. Other Modbus unit IDs are not automatically tried.
+
+Choose **Add**, then **Save changes**, to start monitoring a compatible result. Discovery does not automatically add devices. The monitor uses the HTTP feed; the Modbus read is a diagnostic check, not a new polling mode.
+
+Single-IP inspection checks TCP ports 21, 22, 23, 53, 80, 81, 443, 502, 8080, 8081, 8443, and 10001. Network discovery checks HTTP 80 and TCP 502 on matching devices. These are bounded checks, not an exhaustive port scan; UDP/SNMP and alternative web-port fingerprints are not included.
+
 ## Access control
 
 The master page listens only on loopback and validates the request host. It cannot be opened by other computers on the LAN.

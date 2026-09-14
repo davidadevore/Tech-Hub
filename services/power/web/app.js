@@ -484,18 +484,21 @@ function openDeviceManager() {
 function renderDiscoveryResults() {
   const results = $("#discovery-results");
   if (!state.discoveryResults.length) {
-    results.innerHTML = `<div class="discovery-empty">No compatible devices were found in this /23 range.</div>`;
+    results.innerHTML = `<div class="discovery-empty">No compatible devices were found in this range.</div>`;
     return;
   }
   const draftAddresses = new Set(state.deviceDraft.map((device) => device.address));
   results.innerHTML = state.discoveryResults.map((device) => {
     const added = device.already_configured || draftAddresses.has(device.address);
+    const compatible = device.compatible !== false;
     const evidence = device.evidence || {};
-    const identity = [device.confidence === "confirmed" ? `Confirmed from live feed (${evidence.scada_value_count || 0} values)` : "Probable — live feed did not validate", evidence.http_server ? `Server ${evidence.http_server}` : "", evidence.modbus_tcp_open ? "Modbus TCP available" : "", device.serial ? `Serial ${device.serial}` : "", device.mac ? `MAC ${device.mac}` : "", device.retried ? "Found on slow retry" : ""].filter(Boolean).join(" · ");
+    const identity = [device.confidence === "confirmed" ? `Confirmed from live feed (${evidence.scada_value_count || 0} values)` : compatible ? "Probable — live feed did not validate" : "No compatible power feed identified", evidence.http_server ? `Server ${evidence.http_server}` : "", evidence.modbus_tcp_open ? "TCP 502 open" : "", device.serial ? `Serial ${device.serial}` : "", device.mac ? `MAC ${device.mac}` : "", device.retried ? "Found on slow retry" : ""].filter(Boolean).join(" · ");
+    const ports = `Open TCP ports: ${(device.open_ports || []).join(", ") || "none responded"}. Checked: ${(device.checked_ports || []).join(", ")}.`;
+    const readings = (device.measurements || []).filter(m => ["l1_voltage","l2_voltage","l3_voltage","l1_current","l2_current","l3_current","frequency"].includes(m.key)).map(m => `${m.label}: ${m.value} ${m.unit}`).join(" · ");
     return `<div class="discovery-result">
-      <div><strong>${escapeHTML(device.address)} <span class="discovery-confidence ${escapeHTML(device.confidence || "probable")}">${escapeHTML(device.confidence || "probable")}</span></strong><small>${escapeHTML(`${device.manufacturer || "Datakom"} ${device.model || "DKM-411"}`)} · ${escapeHTML(device.title || "DKM411 Web Scada")}${identity ? `<br>${escapeHTML(identity)}` : ""}</small></div>
-      <select data-discovery-type="${escapeHTML(device.address)}" ${added ? "disabled" : ""}><option value="distro">Power distro</option><option value="cam_split">Cam split</option></select>
-      <button class="button button-secondary" type="button" data-add-discovery="${escapeHTML(device.address)}" ${added ? "disabled" : ""}>${added ? "Added" : "Add"}</button>
+      <div><strong>${escapeHTML(device.address)} <span class="discovery-confidence ${escapeHTML(device.confidence || "probable")}">${escapeHTML(device.confidence || "probable")}</span></strong><small>${escapeHTML(`${device.manufacturer || "Unknown device"} ${device.model || ""}`)} · ${escapeHTML(device.title || "No web identification")}${identity ? `<br>${escapeHTML(identity)}` : ""}<br>${escapeHTML(ports)}${device.modbus_probe ? `<br>${escapeHTML(device.modbus_probe)}` : ""}${device.measurement_source ? `<br>Live feed: ${escapeHTML(device.measurement_source)}` : ""}${readings ? `<br>Sample readings: ${escapeHTML(readings)}` : ""}</small></div>
+      <select data-discovery-type="${escapeHTML(device.address)}" ${added || !compatible ? "disabled" : ""}><option value="distro">Power distro</option><option value="cam_split">Cam split</option></select>
+      <button class="button button-secondary" type="button" data-add-discovery="${escapeHTML(device.address)}" ${added || !compatible ? "disabled" : ""}>${added ? "Added" : compatible ? "Add" : "Unsupported"}</button>
     </div>`;
   }).join("");
 }
@@ -509,25 +512,18 @@ async function discoverDevices() {
   const controller = new AbortController();
   state.discoveryController = controller;
   button.textContent = "Cancel scan";
-  let progress = 2;
-  $("#discovery-results").innerHTML = `<div class="discovery-progress"><div><strong>Scanning 510 addresses</strong><span id="discovery-progress-label">Starting fast pass…</span></div><div><i id="discovery-progress-bar" style="width:2%"></i></div></div>`;
-  const progressTimer = setInterval(() => {
-    progress = Math.min(94, progress + (progress < 55 ? 4 : 1));
-    $("#discovery-progress-bar")?.style.setProperty("width", `${progress}%`);
-    const label = $("#discovery-progress-label");
-    if (label) label.textContent = progress > 55 ? "Retrying slower addresses…" : "Checking for compatible DKM411 devices…";
-  }, 350);
+  $("#discovery-results").innerHTML = `<div class="discovery-empty">Checking device identity, open ports, and live power data…</div>`;
   try {
     const result = await api("/api/discover", { method: "POST", body: JSON.stringify({ subnet: $("#discovery-subnet").value.trim() }), signal: controller.signal });
     state.discoveryResults = result.devices || [];
-    if (result.networks?.length) $("#discovery-subnet").value = result.networks[0];
+    if (result.networks?.length) $("#discovery-subnet").value = result.networks[0].replace(/\/32$/, "");
     renderDiscoveryResults();
-    showToast(state.discoveryResults.length ? `Found ${plural(state.discoveryResults.length, "compatible device")}.` : "No compatible devices were found.");
+    const count = state.discoveryResults.filter(d => d.compatible !== false).length;
+    showToast(count ? `Found ${plural(count, "compatible device")}.` : "Inspection complete — no compatible power feed found.");
   } catch (error) {
     $("#discovery-results").innerHTML = "";
     showToast(error.name === "AbortError" ? "Network discovery cancelled." : error.message, error.name !== "AbortError");
   } finally {
-    clearInterval(progressTimer);
     state.discoveryController = null;
     button.textContent = "Discover";
   }
@@ -536,6 +532,7 @@ async function discoverDevices() {
 function addDiscoveredDevice(address) {
   if (state.deviceDraft.some((device) => device.address === address)) return;
   const result = state.discoveryResults.find((device) => device.address === address);
+  if (!result || result.compatible === false) return;
   const type = $$('[data-discovery-type]', $("#discovery-results")).find((select) => select.dataset.discoveryType === address)?.value || "distro";
   state.deviceDraft.push({
     id: newDeviceId(), name: result?.serial ? `DKM411 ${result.serial}` : "", address, scheme: "http", port: 80, path: "/",

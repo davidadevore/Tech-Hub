@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 2026-09-14
+
+- Extended Power Monitor discovery with single-IP inspection, /24 and /23 scans, checked/open TCP ports, and live-reading previews.
+- Added read-only Modbus validation for recognized DKM-411 devices, with explicit distinction between open ports and verified data.
+- Kept discovered devices opt-in through Add and Save changes.
+
 ## 0.2.0 — 2026-09-13
 
 - Added a native Windows x64 system-tray app with control-page, updates, and log links.
