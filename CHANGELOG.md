@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.2.1 — 2026-09-14
+## 0.2.2 — 2026-09-14
 
 - Extended Power Monitor discovery with single-IP inspection, /24 and /23 scans, checked/open TCP ports, and live-reading previews.
+- Verified DKM-411 low-word-first decoding against live web readings before release.
 - Added read-only Modbus validation for recognized DKM-411 devices, with explicit distinction between open ports and verified data.
 - Kept discovered devices opt-in through Add and Save changes.
 

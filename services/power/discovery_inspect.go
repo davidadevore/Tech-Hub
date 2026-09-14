@@ -72,7 +72,8 @@ func inspectDiscoveryPorts(ctx context.Context, address string, result map[strin
 }
 
 // Datakom DKM-411 Modbus manual V3.0: FC03, address 20480, two registers,
-// high word first, voltage scaled by 10. Never issue write functions.
+// low word first (verified against the DKM-411 web feed), voltage scaled by 10.
+// The manual has conflicting word-order descriptions. Never issue write functions.
 // https://www.datakom.com.tr/upload/Files/411_MODBUS.pdf
 func discoveryModbusVoltage(ctx context.Context, address string) (float64, error) {
 	connection, err := (&net.Dialer{Timeout: time.Second}).DialContext(ctx, "tcp", net.JoinHostPort(address, "502"))
@@ -97,5 +98,5 @@ func parseDiscoveryModbusVoltage(reply []byte) (float64, error) {
 	if len(reply) != 13 || binary.BigEndian.Uint16(reply[0:2]) != 1 || binary.BigEndian.Uint16(reply[2:4]) != 0 || binary.BigEndian.Uint16(reply[4:6]) != 7 || reply[6] != 1 || reply[7] != 3 || reply[8] != 4 {
 		return 0, errors.New("invalid Modbus read response")
 	}
-	return float64(binary.BigEndian.Uint32(reply[9:13])) / 10, nil
+	return float64(uint32(binary.BigEndian.Uint16(reply[11:13]))<<16|uint32(binary.BigEndian.Uint16(reply[9:11]))) / 10, nil
 }

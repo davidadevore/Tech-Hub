@@ -3,10 +3,14 @@ package main
 import "testing"
 
 func TestModbusInspectionValidatesFrame(t *testing.T) {
-	reply := []byte{0, 1, 0, 0, 0, 7, 1, 3, 4, 0, 0, 9, 96}
+	reply := []byte{0, 1, 0, 0, 0, 7, 1, 3, 4, 9, 96, 0, 0}
 	value, err := parseDiscoveryModbusVoltage(reply)
 	if err != nil || value != 240 {
 		t.Fatalf("%v %v", value, err)
+	}
+	highWord := []byte{0, 1, 0, 0, 0, 7, 1, 3, 4, 0, 10, 0, 1}
+	if value, err := parseDiscoveryModbusVoltage(highWord); err != nil || value != 6554.6 {
+		t.Fatalf("wrong register order: %v %v", value, err)
 	}
 	for _, index := range []int{1, 3, 5, 6, 7, 8} {
 		bad := append([]byte{}, reply...)
