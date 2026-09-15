@@ -6,7 +6,7 @@ One desktop application for **D’san Ready**, **Lux Link**, and **Power Monitor
 
 ### Companion module
 
-**[Download the offline Companion module — v1.0.0](https://github.com/horner516/Tech-Hub/releases/download/companion-v1.0.0/streamline-techhub-1.0.0.tgz)**
+**[Download the offline Companion module — v1.0.1](https://github.com/horner516/Tech-Hub/releases/download/companion-v1.0.1/streamline-techhub-1.0.1.tgz)**
 
 Requires **Companion 5.0+**. On the Companion computer, open **Modules → Import module package** and select the .tgz without extracting it. Add **Streamline Tech Hub**, enter the Tech Hub computer’s **IP address or hostname** and the **D’san public port** shown on the master page, plus its service password if set.
 

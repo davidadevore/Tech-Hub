@@ -1,6 +1,6 @@
 # Changelog
 
-## Companion module 1.0.0 — 2026-09-14
+## Companion module 1.0.1 — 2026-09-14
 
 - Added an offline Companion 5.0+ package with configurable Tech Hub IP/hostname, D’san port, and service password.
 - Added live minutes/seconds variables, nine button presets, editable preset text, and stale-data handling.
