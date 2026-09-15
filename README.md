@@ -4,6 +4,18 @@ One desktop application for **D’san Ready**, **Lux Link**, and **Power Monitor
 
 ## Downloads
 
+### Companion module
+
+**[Download the offline Companion module — v1.0.0](https://github.com/horner516/Tech-Hub/releases/download/companion-v1.0.0/streamline-techhub-1.0.0.tgz)**
+
+Requires **Companion 5.0+**. On the Companion computer, open **Modules → Import module package** and select the .tgz without extracting it. Add **Streamline Tech Hub**, enter the Tech Hub computer’s **IP address or hostname** and the **D’san public port** shown on the master page, plus its service password if set.
+
+Nine ready-made presets provide minutes, seconds, a combined clock, all four Limitimer program clocks, and PerfectCue arrows. Next lights green; Previous lights red. Arrow flashing and display time are configurable, as is preset text. Placed buttons remain editable in Companion. The module works over the local network without internet or another Tech Hub port.
+
+[Full setup, variables, and customization guide](companion-module-streamline-techhub/companion/HELP.md) · [Module source](companion-module-streamline-techhub)
+
+### Windows
+
 **[Download Tech Hub for Windows — x64](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Setup.exe)**
 
 Windows 10 (1809+) or Windows 11, x64. Run the installer, then open Tech Hub from Start. The **TH** system-tray menu provides **Open Control Page**, **Check for Updates**, **Open Logs**, and **Quit Tech Hub**. Double-click TH to open the control page. There is no floating widget or Windows Widgets-board integration. The app includes its runtimes and does not require a separate .NET installation.

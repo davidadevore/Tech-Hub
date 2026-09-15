@@ -1,5 +1,11 @@
 # Changelog
 
+## Companion module 1.0.0 — 2026-09-14
+
+- Added an offline Companion 5.0+ package with configurable Tech Hub IP/hostname, D’san port, and service password.
+- Added live minutes/seconds variables, nine button presets, editable preset text, and stale-data handling.
+- Added green Next and red Previous cue arrows with configurable flashing and display duration.
+
 ## 0.3.1 — 2026-09-14
 
 - Added PerfectCue display time in seconds and a Flash on multiple clicks toggle.

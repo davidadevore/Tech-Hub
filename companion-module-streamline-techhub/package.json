@@ -1,0 +1,27 @@
+{
+  "name": "companion-module-streamline-techhub",
+  "version": "1.0.0",
+  "main": "src/main.js",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/horner516/Tech-Hub.git",
+    "directory": "companion-module-streamline-techhub"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.cjs",
+    "package": "companion-module-build",
+    "check": "companion-module-check",
+    "smoke": "node test/package-smoke.cjs"
+  },
+  "engines": {
+    "node": "^22.20"
+  },
+  "dependencies": {
+    "@companion-module/base": "2.0.4"
+  },
+  "devDependencies": {
+    "@companion-module/tools": "3.1.0"
+  },
+  "packageManager": "pnpm@11.19.0"
+}
