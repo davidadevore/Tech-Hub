@@ -1,5 +1,10 @@
 # Changelog
 
+## Companion module 1.0.2 — 2026-09-14
+
+- Enlarged arrow presets to size 72 and hid their top bars to use more button space.
+- Added configurable arrow text size, including automatic sizing for longer labels.
+
 ## Companion module 1.0.1 — 2026-09-14
 
 - Added an offline Companion 5.0+ package with configurable Tech Hub IP/hostname, D’san port, and service password.

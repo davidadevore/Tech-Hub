@@ -13,6 +13,8 @@ function validateConfig(config) {
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw Error('Port must be 1–65535');
   if (!Number.isInteger(interval) || interval < 100 || interval > 5000) throw Error('Poll interval must be 100–5000 ms');
   if (!Number.isFinite(staleSeconds) || staleSeconds < 2 || staleSeconds > 120) throw Error('Stale timeout must be 2–120 seconds');
+  const arrowSize = Number(config.arrowTextSize ?? 72);
+  if (!Number.isInteger(arrowSize) || arrowSize < 0 || arrowSize > 96) throw Error('Arrow text size must be 0–96');
   const cueDuration = Number(config.cueDisplaySeconds ?? 0);
   if (!Number.isFinite(cueDuration) || cueDuration < 0 || cueDuration > 60) throw Error('Arrow display time must be 0–60 seconds');
   return {host, port, interval, staleSeconds, password: String(config.password || '')};

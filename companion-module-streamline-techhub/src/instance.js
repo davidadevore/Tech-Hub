@@ -38,9 +38,10 @@ class TechHubInstance extends InstanceBase {
         steps: [{down: [], up: []}], feedbacks: [{feedbackId: 'unavailable', options: {}, style: {bgcolor: 0x8c2020, color: 0xffffff}}]};
     }
     const timerIds = Object.keys(presets);
+    const arrowSize = Number(this.config?.arrowTextSize ?? 72);
     for (const [direction, arrow] of [['previous', '←'], ['next', '→']]) {
       presets['cue_' + direction] = {type: 'simple', name: 'PerfectCue ' + direction + ' arrow',
-        style: {text: this.config?.[direction + 'Text'] ?? arrow, size: 'auto', color: 0x59636a, bgcolor: 0x071015}, steps: [{down: [], up: []}],
+        style: {text: this.config?.[direction + 'Text'] ?? arrow, size: arrowSize === 0 ? 'auto' : arrowSize, show_topbar: false, color: 0x59636a, bgcolor: 0x071015}, steps: [{down: [], up: []}],
         feedbacks: [
           {feedbackId: 'cue_' + direction, options: {}, style: {bgcolor: 0x071015, color: direction === 'next' ? 0x35d07f : 0xff5263}},
           {feedbackId: 'cue_unavailable', options: {}, style: {bgcolor: 0x8c2020, color: 0xffffff}},
@@ -66,6 +67,7 @@ class TechHubInstance extends InstanceBase {
       {type: 'textinput', id: 'clockText', label: 'Active clock preset text', width: 12, default: '$(techhub:time)'},
       {type: 'textinput', id: 'minutesText', label: 'Minutes preset text', width: 6, default: 'MIN\n$(techhub:minutes)', multiline: true},
       {type: 'textinput', id: 'secondsText', label: 'Seconds preset text', width: 6, default: 'SEC\n$(techhub:seconds)', multiline: true},
+      {type: 'number', id: 'arrowTextSize', label: 'Arrow text size (0 = auto)', width: 12, default: 72, min: 0, max: 96},
       {type: 'textinput', id: 'previousText', label: 'Previous arrow preset text', width: 6, default: '←'},
       {type: 'textinput', id: 'nextText', label: 'Next arrow preset text', width: 6, default: '→'},
       {type: 'number', id: 'staleSeconds', label: 'No new timer packets or heartbeat timeout (seconds)', width: 6, default: 10, min: 2, max: 120},
@@ -76,7 +78,7 @@ class TechHubInstance extends InstanceBase {
     const defaults = {host: '127.0.0.1', port: 8701, password: '', interval: 250, staleSeconds: 10,
       flashCues: true, cueDisplaySeconds: 0, clockText: '$(techhub:time)',
       minutesText: 'MIN\n$(techhub:minutes)', secondsText: 'SEC\n$(techhub:seconds)',
-      previousText: '←', nextText: '→'};
+      previousText: '←', nextText: '→', arrowTextSize: 72};
     const needsDefaults = Object.keys(defaults).some(key => config[key] === undefined);
     config = {...defaults, ...config};
     this.config = config;

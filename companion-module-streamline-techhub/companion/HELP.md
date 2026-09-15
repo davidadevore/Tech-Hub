@@ -44,6 +44,11 @@ Active next text/arrow is green; active previous text/arrow is red. Both use a
 dark background. Idle arrows are gray. To change active colors on a placed
 button, edit its **Feedbacks → PerfectCue arrow lit** style.
 
+**Arrow text size** defaults to **72** for large arrow glyphs. Choose a size
+up to 96, or **0 (auto)** to fit longer custom labels. Arrow presets hide the
+top bar to use more of the button face. These changes apply when placing a
+new preset; existing buttons can be resized in Companion’s button editor.
+
 ## PerfectCue options
 
 **Flash arrow buttons on every received cue** enables two brief flashes at the

@@ -38,6 +38,8 @@ async function until(predicate) {
     assert.equal(Object.keys(presets).length, 9);
     assert.equal(presets.minutes.style.text, 'M $(renamed_hub:minutes)');
     assert.equal(presets.cue_next.style.text, 'GO');
+    assert.equal(presets.cue_next.style.size, 72);
+    assert.equal(presets.cue_next.style.show_topbar, false);
     assert.equal(presets.cue_previous.style.text, 'BACK');
     assert.equal(presets.cue_next.feedbacks[0].style.color, 0x35d07f);
     assert.equal(presets.cue_previous.feedbacks[0].style.color, 0xff5263);
@@ -50,8 +52,9 @@ async function until(predicate) {
     await until(() => !values.cue_next_active);
     assert(checked > 3);
     context.label = 'second_hub';
-    await instance.configUpdated({host: '127.0.0.1', port: server.address().port, interval: 100, flashCues: false});
+    await instance.configUpdated({host: '127.0.0.1', port: server.address().port, interval: 100, flashCues: false, arrowTextSize: 0});
     assert.equal(presets.clock.style.text, '$(second_hub:time)');
+    assert.equal(presets.cue_next.style.size, 'auto');
     await until(() => values.connected);
     eventCount++; await until(() => values.cue_next_lit);
     await wait(180); assert(values.cue_next_lit);
