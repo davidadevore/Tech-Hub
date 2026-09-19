@@ -846,7 +846,7 @@ func (m *Monitor) publicRecord(record *Record) map[string]any {
 	}
 }
 
-func (m *Monitor) Status() map[string]any {
+func (m *Monitor) Status(includeHistory ...bool) map[string]any {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	config := m.store.Get()
@@ -855,7 +855,11 @@ func (m *Monitor) Status() map[string]any {
 	counts := map[string]int{"total": len(config.Devices), "online": 0, "warning": 0, "offline": 0, "pending": 0}
 	for _, device := range config.Devices {
 		if record := m.records[device.ID]; record != nil {
-			devices = append(devices, m.publicRecord(record))
+			public := m.publicRecord(record)
+			if len(includeHistory) > 0 && !includeHistory[0] {
+				delete(public, "history")
+			}
+			devices = append(devices, public)
 			counts[record.Status]++
 		}
 	}
@@ -1602,8 +1606,19 @@ func (app *App) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		writeJSON(writer, 200, map[string]any{"ok": true, "config": app.store.Get()})
 		return
 	}
+	if request.Method == http.MethodGet && path == "/api/history" {
+		app.monitor.mu.RLock()
+		history := map[string]any{}
+		for id, record := range app.monitor.records {
+			history[id] = append([]map[string]any{}, record.History...)
+		}
+		app.monitor.mu.RUnlock()
+		writeJSON(writer, 200, history)
+		return
+	}
+
 	if request.Method == http.MethodGet && path == "/api/status" {
-		writeJSON(writer, 200, app.monitor.Status())
+		writeJSON(writer, 200, app.monitor.Status(request.URL.Query().Get("history") != "false"))
 		return
 	}
 	if request.Method == http.MethodGet && path == "/api/update" {

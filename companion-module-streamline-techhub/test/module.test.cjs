@@ -82,3 +82,19 @@ test('login, cookie reuse, expiry, invalid credentials, invalid JSON and abort',
     const ac = new AbortController(); ac.abort(); await assert.rejects(client.read(ac.signal));
   } finally {server.closeAllConnections(); await new Promise(resolve => server.close(resolve));}
 });
+
+test('numbered cue history preserves rapid clicks and never replays duplicates or prior sessions', () => {
+ const c=new CueDisplay(), s=state(), config={flashCues:true};
+ s.perfectcue.stream_id='session-a';s.perfectcue.history=[];c.accept(s,config,0);
+ const event=(sequence,kind)=>({sequence,kind,code:kind,at:'same-time'});
+ s.perfectcue.event_count=4;s.perfectcue.last_event=event(4,'previous');
+ s.perfectcue.history=[event(4,'previous'),event(3,'next'),event(2,'next')];
+ c.accept(s,config,100);assert(c.values(100).cue_next_lit);assert(!c.values(225).cue_next_lit);
+ c.accept(s,config,240);assert(c.values(350).cue_next_lit);assert(!c.values(475).cue_next_lit);
+ assert(c.values(600).cue_previous_lit);assert.equal(c.pending.length,0);
+ c.accept(s,config,700);assert.equal(c.pending.length,0);
+ s.perfectcue.stream_id='session-b';c.accept(s,config,800);assert(!c.values(800).cue_previous_active);
+ s.perfectcue.event_count=5;s.perfectcue.last_event=event(5,'next');s.perfectcue.history=[event(5,'next')];c.accept(s,config,900);assert(c.values(900).cue_next_lit);
+ s.perfectcue.event_count=7;s.perfectcue.last_event=event(7,'previous');s.perfectcue.history=[event(7,'previous'),event(6,'next')];c.accept(s,config,950);
+ c.values(4000);assert.equal(c.pending.length,0);
+});

@@ -1,6 +1,9 @@
 "use strict";
 
 const state = {
+  history: {},
+  historyAt: 0,
+  statusBusy: false,
   config: null,
   status: null,
   deviceDraft: [],
@@ -350,9 +353,29 @@ function renderDevices(data) {
   grid.setAttribute("aria-busy", "false");
 }
 
-async function refreshStatus() {
+let historyBusy = false;
+async function refreshHistory() {
+  if (historyBusy || document.hidden || Date.now() - state.historyAt <= 15000) return;
+  historyBusy = true;
   try {
-    const data = await api("/api/status");
+    const history = await api('/api/history', {signal: AbortSignal.timeout(4000)});
+    state.history = history; state.historyAt = Date.now();
+    if (state.status) {
+      for (const device of state.status.devices) device.history = history[device.id] || [];
+      renderDevices(state.status);
+    }
+  } catch { state.historyAt = Date.now(); }
+  finally { historyBusy = false; }
+}
+
+async function refreshStatus() {
+  if (state.statusBusy) return;
+  state.statusBusy = true;
+  try {
+    const data = await api("/api/status?history=false", {signal: AbortSignal.timeout(4000)});
+    // Charts refresh independently of live readings; hidden tabs need no chart traffic.
+    void refreshHistory();
+    for (const device of data.devices) device.history = state.history[device.id] || [];
     state.status = data;
     renderSummary(data);
     renderAlerts(data);
@@ -363,7 +386,7 @@ async function refreshStatus() {
     indicator.className = "server-indicator disconnected";
     $("span", indicator).textContent = "Monitor disconnected";
     $("#cycle-label").textContent = "The local monitor is not responding. Keep the launch window open.";
-  }
+  } finally { state.statusBusy = false; }
 }
 
 function renderUpdateStatus(status) {

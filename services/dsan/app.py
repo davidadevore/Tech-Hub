@@ -171,6 +171,8 @@ class SharedState:
         self.lock = threading.RLock()
         self.config = self._load_config()
         self.config_version = 0
+        self.device_versions = {"limitimer": 0, "perfectcue": 0}
+        self.limitimer_seen = None
         self.network_cache_at = 0.0
         self.network_cache: dict[str, Any] = {
             "server": {
@@ -193,6 +195,7 @@ class SharedState:
                 "error": None,
                 "updated_at": None,
                 "event_count": 0,
+                "stream_id": os.urandom(16).hex(),
                 "last_event": None,
                 "history": [],
             },
@@ -217,7 +220,13 @@ class SharedState:
 
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
-            return {"config": public_config(self.config), "network": self.network_status(), **deepcopy(self.data)}
+            data = deepcopy(self.data)
+            timer = data["limitimer"]
+            timer["stale"] = self.limitimer_seen is None or time.monotonic() - self.limitimer_seen > 10
+            if timer["status"] == "connected" and timer["stale"]:
+                timer["status"] = "disconnected"
+                timer["error"] = "No valid timer data received in the last 10 seconds"
+            return {"config": public_config(self.config), "network": self.network_status(), **data}
 
     def network_status(self) -> dict[str, Any]:
         now = time.time()
@@ -235,20 +244,28 @@ class SharedState:
     def set_config(self, config: dict[str, Any]) -> dict[str, Any]:
         with self.lock:
             config = validate_config(config, existing=self.config)
-            self.config = config
-            self.config_version += 1
-            for name in ("limitimer", "perfectcue"):
-                self.data[name]["status"] = "waiting" if config[name]["enabled"] else "disabled"
-                self.data[name]["error"] = None
             temp_path = CONFIG_PATH.with_suffix(".json.tmp")
             temp_path.write_text(json.dumps(config, indent=2) + "\n")
             os.replace(temp_path, CONFIG_PATH)
+            for name in ("limitimer", "perfectcue"):
+                if any(config[name][key] != self.config[name][key] for key in ("enabled", "host", "port")):
+                    self.device_versions[name] += 1
+                    self.data[name]["status"] = "waiting" if config[name]["enabled"] else "disabled"
+                    self.data[name]["error"] = None
+                    if name == "limitimer":
+                        self.limitimer_seen = None
+                        self.data[name]["data"] = None
+            self.config = config
+            self.config_version += 1
             return public_config(config)
 
     def connection(self, name: str, status: str, error: str | None = None) -> None:
         with self.lock:
             self.data[name]["status"] = status
             self.data[name]["error"] = error
+            if name == "limitimer" and status == "connecting":
+                self.limitimer_seen = None
+                self.data[name]["data"] = None
 
     def limitimer_frame(self, parsed: dict[str, Any]) -> None:
         with self.lock:
@@ -258,10 +275,12 @@ class SharedState:
             target["updated_at"] = parsed["updated_at"]
             target["packet_count"] += 1
             target["data"] = parsed
+            self.limitimer_seen = time.monotonic()
 
     def heartbeat(self) -> None:
         with self.lock:
             self.data["limitimer"]["heartbeat_count"] += 1
+            self.limitimer_seen = time.monotonic()
 
     def perfectcue_event(self, code: int) -> None:
         labels = {
@@ -280,8 +299,9 @@ class SharedState:
             target["error"] = None
             target["updated_at"] = event["at"]
             target["event_count"] += 1
+            event["sequence"] = target["event_count"]
             target["last_event"] = event
-            target["history"] = [event, *target["history"]][:20]
+            target["history"] = [event, *target["history"]][:256]
 
 
 def password_digest(password: str, salt_hex: str) -> str:
@@ -401,7 +421,7 @@ class DeviceWorker(threading.Thread):
         while True:
             with self.shared.lock:
                 config = deepcopy(self.shared.config[self.device_name])
-                version = self.shared.config_version
+                version = self.shared.device_versions[self.device_name]
             if not config["enabled"]:
                 self.shared.connection(self.device_name, "disabled")
                 time.sleep(0.5)
@@ -418,7 +438,7 @@ class DeviceWorker(threading.Thread):
 
     def config_changed(self, version: int) -> bool:
         with self.shared.lock:
-            return version != self.shared.config_version
+            return version != self.shared.device_versions[self.device_name]
 
     def read_connection(self, connection: socket.socket, version: int) -> None:
         raise NotImplementedError

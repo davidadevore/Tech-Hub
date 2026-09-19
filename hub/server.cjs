@@ -5,6 +5,7 @@ const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
 const {spawn} = require('node:child_process');
+const {supervise} = require('./supervisor.cjs');
 const {promisify} = require('node:util');
 const scrypt = promisify(crypto.scrypt);
 const definitions = [
@@ -43,7 +44,7 @@ function close(server) { server.closeAllConnections(); return new Promise(resolv
 function ips(host) { return host==='127.0.0.1'?[]:[...new Set(Object.values(os.networkInterfaces()).flat().filter(n=>n&&!n.internal&&n.family==='IPv4').map(n=>n.address))]; }
 function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><style>:root{color-scheme:dark}body{background:#071015;color:#f2f7f5;font:16px system-ui;display:grid;place-items:center;min-height:95vh}main{width:min(360px,85vw)}main>p:first-child{color:#ff8a1f;font-weight:700;letter-spacing:.15em}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #31505a;font:inherit}input{background:#0c181e;color:#f2f7f5}button{background:#ff8a1f;color:#1b0d02;border-color:#ff8a1f;font-weight:650;cursor:pointer}button:hover{background:#ffa24f}input:focus-visible,button:focus-visible{outline:2px solid #ff8a1f;outline-offset:3px}p{color:#8ca3aa}p[role=alert]{color:#ff7a7a}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
 async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), launch=true}={}) {
-  const config=loadConfig(dir), sessions=new Map(), attempts=new Map(), states=new Map(), servers=[],children=[];
+  const config=loadConfig(dir), sessions=new Map(), attempts=new Map(), states=new Map(), servers=[],supervisors=new Map();
   let stopping=false;
   const startedAt=Date.now();
   const services=definitions.map(d=>({...d,...config.services[d.id]}));
@@ -77,6 +78,14 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
       if(req.method==='GET'&&req.url==='/api/status')return send(res,200,status());
       if(req.method==='GET'&&['/','/app.js','/style.css'].includes(req.url)) {
         const file=req.url==='/'?'index.html':req.url.slice(1); return send(res,200,fs.readFileSync(path.join(__dirname,file)),file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');
+      }
+      if(req.method==='POST'&&req.url==='/api/restart') {
+        if(!sameOrigin(req) || !/^application\/json/.test(req.headers['content-type']||''))return send(res,403,{error:'Use the local admin page.'});
+        const body=JSON.parse(await readBody(req)), supervisor=supervisors.get(body.id);
+        if(!supervisor)return send(res,400,{error:'Service cannot be restarted.'});
+        if(states.get(body.id).state==='starting'||states.get(body.id).state==='recovering')return send(res,409,{error:'Service recovery is already in progress.'});
+        states.set(body.id,{state:'recovering',error:null});
+        await supervisor.restart();return send(res,200,{ok:true});
       }
       if(req.method==='POST'&&req.url==='/api/access') {
         if(!sameOrigin(req) || !/^application\/json/.test(req.headers['content-type']||'')) return send(res,403,{error:'Use the local admin page.'});
@@ -137,21 +146,18 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
     if(d.id==='lux'){command=process.execPath;args=[path.join(__dirname,'lux-server.cjs'),path.join(resources,'lux')];}
     const logPath=path.join(logdir,d.id+'.log');
     if(fs.existsSync(logPath)&&fs.statSync(logPath).size>5*1024*1024)fs.renameSync(logPath,logPath+'.previous');
-    const log=fs.openSync(logPath,'a',0o600);
-    const child=spawn(command,args,{windowsHide:true,env:{...process.env,TECH_HUB_MANAGED:'1',TECH_HUB_VERSION:require('../package.json').version,TECH_HUB_PUBLIC_PORT:String(d.port),TECH_HUB_PUBLIC_HOST:config.host,TECH_HUB_BACKEND_PORT:String(d.backendPort),TECH_HUB_BACKEND_HOST:'127.0.0.1',TECH_HUB_DATA_DIR:dataDir,LNA_APP_SUPPORT:dataDir,LNA_MA_READER:process.platform==='darwin'?path.join(resources,'MA Web Remote Reader.app','Contents','MacOS','MA Web Remote Reader'):''},stdio:['ignore',log,log]});fs.closeSync(log);children.push(child);
-    child.on('error',error=>states.set(d.id,{state:'error',error:error.message}));
-    child.on('exit',(code,signal)=>{if(!stopping)states.set(d.id,{state:'error',error:`Service stopped (${signal||code}). See ${d.id}.log; quit and reopen Tech Hub to restart.`});});
-    // Backend ports are preflighted; a child that fails its strict bind exits.
-    const probe=async()=>{
-      if(stopping||states.get(d.id).state==='error')return;
-      try {const response=await fetch(`http://127.0.0.1:${d.backendPort}/`,{signal:AbortSignal.timeout(1500)});await response.body?.cancel(); if(response.ok&&child.exitCode===null){states.set(d.id,{state:'running',error:null});return;}}catch{}
-      if(Date.now()-startedAt>30000){states.set(d.id,{state:'error',error:'Startup timed out. See service log, then quit and reopen Tech Hub.'});child.kill();return;}
-      setTimeout(probe,300).unref();
-    };setTimeout(probe,500).unref();
+    supervisors.set(d.id,supervise({
+      start:()=>{
+        const log=fs.openSync(logPath,'a',0o600);
+        const child=spawn(command,args,{windowsHide:true,env:{...process.env,TECH_HUB_MANAGED:'1',TECH_HUB_VERSION:require('../package.json').version,TECH_HUB_PUBLIC_PORT:String(d.port),TECH_HUB_PUBLIC_HOST:config.host,TECH_HUB_BACKEND_PORT:String(d.backendPort),TECH_HUB_BACKEND_HOST:'127.0.0.1',TECH_HUB_DATA_DIR:dataDir,LNA_APP_SUPPORT:dataDir,LNA_MA_READER:process.platform==='darwin'?path.join(resources,'MA Web Remote Reader.app','Contents','MacOS','MA Web Remote Reader'):''},stdio:['ignore',log,log]});fs.closeSync(log);return child;
+      },
+      check:async()=>{const response=await fetch(`http://127.0.0.1:${d.backendPort}/`,{signal:AbortSignal.timeout(1500)});await response.body?.cancel();return response.ok;},
+      report:state=>states.set(d.id,state)
+    }));
   }
-  try {save(path.join(dir,'runtime.json'),{pid:process.pid,adminPort:config.adminPort});} catch(error) {for(const child of children)child.kill();await Promise.all(servers.map(close));throw error;}
+  try {save(path.join(dir,'runtime.json'),{pid:process.pid,adminPort:config.adminPort});} catch(error) {await Promise.all([...supervisors.values()].map(s=>s.stop()));await Promise.all(servers.map(close));throw error;}
   const cleanup=setInterval(()=>{for(const[k,s]of sessions)if(s.expires<Date.now())sessions.delete(k);for(const[k,a]of attempts)if(a.until<Date.now())attempts.delete(k);},60000);cleanup.unref();
-  async function stop(){if(stopping)return;stopping=true;clearInterval(cleanup);for(const child of children)if(child.pid&&child.exitCode===null&&child.signalCode===null)child.kill('SIGINT');await Promise.all(servers.map(close));await Promise.all(children.map(child=>(!child.pid||child.exitCode!==null||child.signalCode!==null)?Promise.resolve():new Promise(resolve=>{const timer=setTimeout(()=>{child.kill('SIGKILL');resolve();},3000);child.once('exit',()=>{clearTimeout(timer);resolve();});})));}
+  async function stop(){if(stopping)return;stopping=true;clearInterval(cleanup);await Promise.all([...supervisors.values()].map(s=>s.stop()));await Promise.all(servers.map(close));}
   return {status,stop,config};
 }
 if(require.main===module)startHub().then(hub=>{console.log(`TECH_HUB_READY http://127.0.0.1:${hub.config.adminPort}`);if(process.env.TECH_HUB_STDIN_CONTROL==='1'){const lines=require('node:readline').createInterface({input:process.stdin});lines.on('line',line=>{if(line==='shutdown')hub.stop().then(()=>process.exit(0));});lines.on('close',()=>hub.stop().then(()=>process.exit(0)));}for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>hub.stop().then(()=>process.exit(0)));if(process.env.TECH_HUB_PARENT_PID){const parent=Number(process.env.TECH_HUB_PARENT_PID);setInterval(()=>{try{process.kill(parent,0);}catch{hub.stop().then(()=>process.exit(0));}},2000).unref();}}).catch(error=>{console.error(error.message);process.exitCode=1;});

@@ -353,6 +353,7 @@
   <section class="fullscreen-view" id="fullscreen-view" aria-label="Full-screen timer and cue">
     <button class="secondary browser-fullscreen-button" id="browser-enter-fullscreen" type="button" hidden>Enter full screen</button>
     <div class="fullscreen-stage">
+      <div id="timer-connection-warning" role="status" hidden style="position:absolute;top:3%;left:5%;right:5%;text-align:center;color:#ff8a1f;font-size:clamp(18px,3vw,48px)">Connection lost — timer unavailable</div>
       <div class="fullscreen-clock" id="fullscreen-clock">--:--</div>
       <div class="fullscreen-directions" aria-live="assertive">
         <div class="fullscreen-direction previous" id="fullscreen-previous" aria-label="Previous"><svg viewBox="0 0 120 64" preserveAspectRatio="none" aria-hidden="true"><path transform="translate(120 0) scale(-1 1)" d="M7 20H79V6Q79 2 83 5L116 29Q120 32 116 35L83 59Q79 62 79 58V44H7Q3 44 3 40V24Q3 20 7 20Z"/></svg></div>
@@ -590,7 +591,20 @@
       setStatus('mobile-limitimer-status', device.status, device.error);
       $('metric-packets').textContent = device.packet_count.toLocaleString();
       $('mobile-packets').textContent = device.packet_count.toLocaleString();
-      if (!device.data) return;
+      const unavailable = device.status !== 'connected' || device.stale || !device.data;
+      $('timer-connection-warning').hidden = !unavailable;
+      if (unavailable) {
+        ['clock', 'fullscreen-clock', 'mobile-clock'].forEach(id => renderClock($(id), '--:--'));
+        ['timer-state', 'mobile-timer-state'].forEach(id => {
+          $(id).className = 'timer-state';
+          $(id).querySelector('span:last-child').textContent = 'Unavailable';
+        });
+        ['green', 'yellow', 'red'].forEach(color => {
+          $('lamp-' + color).classList.remove('on');
+          $('mobile-lamp-' + color).classList.remove('on');
+        });
+        return;
+      }
       const data = device.data;
       const active = data.active;
       $('selected-program').textContent = `Program ${data.selected_program}`;
@@ -722,9 +736,13 @@
       $('auth-username').required = enabled;
     }
 
+    let polling = false;
     async function poll() {
+      if (polling) return;
+      polling = true;
       try {
-        const response = await fetch('/api/state', {cache: 'no-store'});
+        const response = await fetch('/api/state', {cache: 'no-store', signal: AbortSignal.timeout(3000)});
+        if (!response.ok) throw new Error('Monitor unavailable');
         latestState = await response.json();
         applyDisplaySettings(latestState.config);
         renderNetworkInfo(latestState.network);
@@ -732,9 +750,9 @@
         renderCue(latestState.perfectcue);
         renderMessage(latestState.message);
       } catch (_) {
-        setStatus('limitimer-status', 'disconnected', 'Local monitor is unavailable');
+        renderLimitimer({status: 'disconnected', error: 'Local monitor is unavailable', packet_count: 0});
         setStatus('perfectcue-status', 'disconnected', 'Local monitor is unavailable');
-      }
+      } finally { polling = false; }
     }
 
     async function copyToClipboard(value) {
@@ -929,7 +947,7 @@
     $('close-widget').addEventListener('click', () => window.pywebview.api.close_widget());
 
     poll();
-    setInterval(poll, 350);
+    setTimeout(async function refresh() { await poll(); setTimeout(refresh, 350); }, 350);
   </script>
 </body>
 </html>

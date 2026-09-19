@@ -17,6 +17,12 @@ try {
  const lux=hub.status().services.find(s=>s.id==='lux').localURL;
  const login=await fetch(lux+'/__hub/login',{method:'POST',body:new URLSearchParams({password:'smoke-test-only'}),redirect:'manual'});assert.equal(login.status,303);
  assert.equal((await fetch(lux,{headers:{Cookie:login.headers.get('set-cookie').split(';')[0]}})).status,200);
- console.log('PASS: bundled services running on reassigned ports; password gate and login verified; Set password label bundled.');
+ const restart=async(headers={})=>fetch(admin+'/api/restart',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify({id:'dsan'})});
+ assert.equal((await restart({Origin:'http://example.invalid'})).status,403);
+ assert.equal((await restart()).status,200);
+ for(let i=0;i<100&&hub.status().services.find(s=>s.id==='dsan').state!=='running';i++)await new Promise(r=>setTimeout(r,100));
+ assert(hub.status().services.every(s=>s.state==='running'),JSON.stringify(hub.status()));
+ assert.equal((await fetch(lux)).status,401);
+ console.log('PASS: bundled services running on reassigned ports; password gate and login verified; Set password label bundled; individual restart preserves other services and passwords.');
 } catch(e){console.error('Smoke logs: '+dir);throw e;} finally {await hub?.stop();await Promise.all(blockers.map(s=>new Promise(r=>{s.closeAllConnections();s.close(r);})));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

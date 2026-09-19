@@ -31,7 +31,7 @@ jobs:
       - run: python -m pip install -r requirements-build.txt
       - run: pnpm --dir services/lux install --frozen-lockfile
       - run: python -m unittest discover -s services/dsan -p "test_*.py"
-      - run: node --test tests/*.test.cjs
+      - run: node --test tests/*.test.cjs services/lux/tests/fetch-signal-snapshot.test.mjs
       - run: go -C services/power test ./...
       - run: ./scripts/build-windows.ps1
         shell: pwsh
@@ -64,7 +64,7 @@ jobs:
       - run: python -m pip install -r requirements-build.txt
       - run: pnpm --dir services/lux install --frozen-lockfile
       - run: python -m unittest discover -s services/dsan -p "test_*.py"
-      - run: node --test tests/*.test.cjs
+      - run: node --test tests/*.test.cjs services/lux/tests/fetch-signal-snapshot.test.mjs
       - run: go -C services/power test ./...
       - run: bash scripts/build-mac.sh
       - run: node scripts/smoke-bundle.cjs "dist/Tech Hub.app/Contents/Resources"

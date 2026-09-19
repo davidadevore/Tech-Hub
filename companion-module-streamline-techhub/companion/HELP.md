@@ -63,8 +63,11 @@ Tech Hub’s “Flash on multiple clicks” setting.
 
 Arrow buttons work even when Limitimer is disabled. Disconnected arrows have a
 red background. Reconnecting does not replay the last stored cue.
-Cues are sampled at the poll interval: if several arrive between requests, the
-latest one is displayed. This is a status display, not a lossless cue recorder.
+With Tech Hub 0.3.2 or later, numbered cue history preserves clicks between
+requests. Brief bursts display in order at 250 ms spacing. Queues are limited to
+eight events and expire after two seconds to avoid replaying old cues after a
+network interruption. Older Tech Hub versions display only the latest sampled
+cue. Reconnecting or restarting Tech Hub establishes a fresh baseline.
 
 ## Variables for custom buttons
 
