@@ -13,5 +13,6 @@ test('disconnected and stale timers clear desktop, mobile, fullscreen, running i
   for(const id of ['clock','fullscreen-clock','mobile-clock'])assert.equal($(id).time,'--:--');
   assert.equal($('timer-connection-warning').hidden,false);assert.equal($('timer-state').querySelector().textContent,'Unavailable');
  }
+ ctx.device={status:'disabled',packet_count:0};vm.runInContext('renderLimitimer(device)',ctx);assert.equal($('timer-connection-warning').hidden,true);
  ctx.device={status:'connected',stale:false,packet_count:3,data:{active:{running:true,signal:'green'},selected_program:1}};vm.runInContext('renderLimitimer(device)',ctx);assert.equal($('clock').time,'02:30');assert.equal($('timer-connection-warning').hidden,true);
 });

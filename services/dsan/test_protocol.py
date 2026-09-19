@@ -6,22 +6,24 @@ from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
 
-from app import (
-    DEFAULT_CONFIG,
-    LOCAL_PORT,
-    SERVER_BIND_HOST,
-    SHARED,
-    Handler,
-    SharedState,
-    base128_time,
-    crc16_modbus,
-    parse_limitimer_frame,
-    public_config,
-    validate_config,
-    validate_message,
-    verify_password,
-    create_server,
-)
+# Protocol tests must not depend on the runner hostname resolving in DNS.
+with patch('socket.getaddrinfo', return_value=[]):
+    from app import (
+        DEFAULT_CONFIG,
+        LOCAL_PORT,
+        SERVER_BIND_HOST,
+        SHARED,
+        Handler,
+        SharedState,
+        base128_time,
+        crc16_modbus,
+        parse_limitimer_frame,
+        public_config,
+        validate_config,
+        validate_message,
+        verify_password,
+        create_server,
+    )
 
 
 CAPTURED_FRAME = bytes.fromhex(
@@ -30,6 +32,11 @@ CAPTURED_FRAME = bytes.fromhex(
 
 
 class ProtocolTests(unittest.TestCase):
+    def setUp(self):
+        network = patch('app.local_ipv4_addresses', return_value=['127.0.0.1'])
+        network.start()
+        self.addCleanup(network.stop)
+
     def test_cue_display_settings_validation_and_legacy_defaults(self):
         config = deepcopy(DEFAULT_CONFIG)
         config["perfectcue"].pop("display_time_seconds")

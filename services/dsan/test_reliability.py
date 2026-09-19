@@ -3,9 +3,15 @@ import unittest
 from pathlib import Path
 from copy import deepcopy
 from unittest.mock import patch
-import app
+with patch('socket.getaddrinfo', return_value=[]):
+    import app
 
 class ReliabilityTests(unittest.TestCase):
+    def setUp(self):
+        network = patch('app.local_ipv4_addresses', return_value=['127.0.0.1'])
+        network.start()
+        self.addCleanup(network.stop)
+
     def test_display_changes_do_not_reconnect_and_device_changes_are_isolated(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(app, 'CONFIG_PATH', Path(directory) / 'config.json'):
             state = app.SharedState()

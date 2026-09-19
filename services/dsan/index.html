@@ -592,7 +592,7 @@
       $('metric-packets').textContent = device.packet_count.toLocaleString();
       $('mobile-packets').textContent = device.packet_count.toLocaleString();
       const unavailable = device.status !== 'connected' || device.stale || !device.data;
-      $('timer-connection-warning').hidden = !unavailable;
+      $('timer-connection-warning').hidden = !unavailable || device.status === 'disabled';
       if (unavailable) {
         ['clock', 'fullscreen-clock', 'mobile-clock'].forEach(id => renderClock($(id), '--:--'));
         ['timer-state', 'mobile-timer-state'].forEach(id => {
