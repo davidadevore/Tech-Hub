@@ -30,7 +30,6 @@ sealed class HubWindow : Form
     StreamWriter? log;
     int? port;
     bool quitting, refreshing;
-    readonly Color orange = Color.FromArgb(255, 138, 31);
 
     public HubWindow()
     {
@@ -42,9 +41,9 @@ sealed class HubWindow : Form
         menu.Items.Add("Check for Updates", null, (_, _) => Open("https://github.com/horner516/Tech-Hub/releases/latest"));
         menu.Items.Add("Open Logs", null, (_, _) => Open(Path.Combine(data, "logs")));
         menu.Items.Add(new ToolStripSeparator()); menu.Items.Add("Quit Tech Hub", null, async (_, _) => await Quit());
-        using var bitmap = new Bitmap(32, 32);
-        using (var g = Graphics.FromImage(bitmap)) { g.Clear(BackColor); using var font = new Font("Segoe UI", 13, FontStyle.Bold); using var brush = new SolidBrush(orange); g.DrawString("TH", font, brush, -1, 3); }
-        var handle = bitmap.GetHicon(); using (var icon = Icon.FromHandle(handle)) { tray.Icon = (Icon)icon.Clone(); Icon = (Icon)icon.Clone(); } DestroyIcon(handle);
+        using var iconStream = typeof(HubWindow).Assembly.GetManifestResourceStream("TechHub.ico")!;
+        using var icon = new Icon(iconStream, SystemInformation.SmallIconSize);
+        tray.Icon = (Icon)icon.Clone(); Icon = (Icon)icon.Clone();
         tray.Text = "Tech Hub"; tray.ContextMenuStrip = menu; tray.Visible = true;
         tray.DoubleClick += (_, _) => { if (port is int p) Open($"http://127.0.0.1:{p}"); };
         timer.Tick += async (_, _) => await RefreshStatus();
@@ -96,7 +95,6 @@ sealed class HubWindow : Form
         if (disposing) { quitting = true; timer.Dispose(); job?.Dispose(); tray.Icon?.Dispose(); tray.Dispose(); http.Dispose(); hub?.Dispose(); /* Writer stays alive until async pipe callbacks finish. */ }
         base.Dispose(disposing);
     }
-    [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr icon);
 }
 
 // Windows kills the entire owned process tree even if the tray host crashes.

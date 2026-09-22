@@ -20,6 +20,7 @@ OutputBaseFilename=Tech-Hub-Windows-x64-Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\assets\TechHub.ico
 CloseApplications=no
 [Files]
 Source: "..\dist\windows\Tech Hub\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs

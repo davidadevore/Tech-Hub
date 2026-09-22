@@ -26,6 +26,7 @@ cp package.json "$resources/package.json"
 (cd services/netgear && "$NODE_BINARY" node_modules/next/dist/bin/next build)
 "$NODE_BINARY" scripts/bundle-services.cjs "$resources"
 cp native-mac/Info.plist "$app/Contents/Info.plist"
+cp assets/TechHub.icns "$resources/TechHub.icns"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$app/Contents/Info.plist"
 /usr/bin/swiftc -module-cache-path "$project_dir/build/swift-cache" -target arm64-apple-macos13.0 native-mac/TechHub.swift -o "$app/Contents/MacOS/Tech Hub" -framework AppKit -framework Foundation
 reader="$resources/MA Web Remote Reader.app"

@@ -1,5 +1,10 @@
 # Changelog
 
+## Next build
+
+- Added the TH application icon to macOS, Windows, and the Windows installer and system tray.
+- Added service-specific browser icons for every dashboard and password screen, plus the TH icon on the master page.
+
 ## Companion module 1.0.2 — 2026-09-14
 
 - Enlarged arrow presets to size 72 and hid their top bars to use more button space.

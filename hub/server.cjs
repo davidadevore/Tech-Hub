@@ -51,7 +51,7 @@ function sameOrigin(req) { return req.headers['sec-fetch-site']!=='cross-site' &
 function listen(server,port,host) { return new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,()=>{server.removeListener('error',reject);resolve();});}); }
 function close(server) { server.closeAllConnections(); return new Promise(resolve=>server.close(resolve)); }
 function ips(host) { return host==='127.0.0.1'?[]:[...new Set(Object.values(os.networkInterfaces()).flat().filter(n=>n&&!n.internal&&n.family==='IPv4').map(n=>n.address))]; }
-function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><style>:root{color-scheme:dark}body{background:#071015;color:#f2f7f5;font:16px system-ui;display:grid;place-items:center;min-height:95vh}main{width:min(360px,85vw)}main>p:first-child{color:#ff8a1f;font-weight:700;letter-spacing:.15em}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #31505a;font:inherit}input{background:#0c181e;color:#f2f7f5}button{background:#ff8a1f;color:#1b0d02;border-color:#ff8a1f;font-weight:650;cursor:pointer}button:hover{background:#ffa24f}input:focus-visible,button:focus-visible{outline:2px solid #ff8a1f;outline-offset:3px}p{color:#8ca3aa}p[role=alert]{color:#ff7a7a}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
+function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><link rel="icon" type="image/svg+xml" href="/__hub/favicon.svg"><style>:root{color-scheme:dark}body{background:#071015;color:#f2f7f5;font:16px system-ui;display:grid;place-items:center;min-height:95vh}main{width:min(360px,85vw)}main>p:first-child{color:#ff8a1f;font-weight:700;letter-spacing:.15em}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #31505a;font:inherit}input{background:#0c181e;color:#f2f7f5}button{background:#ff8a1f;color:#1b0d02;border-color:#ff8a1f;font-weight:650;cursor:pointer}button:hover{background:#ffa24f}input:focus-visible,button:focus-visible{outline:2px solid #ff8a1f;outline-offset:3px}p{color:#8ca3aa}p[role=alert]{color:#ff7a7a}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
 async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), launch=true}={}) {
   const config=loadConfig(dir), sessions=new Map(), attempts=new Map(), states=new Map(), servers=[],supervisors=new Map();
   const activeResponses=new Map(definitions.map(d=>[d.id,new Set()]));
@@ -85,6 +85,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   const admin=http.createServer(async(req,res)=>{
     if (![`127.0.0.1:${config.adminPort}`,`localhost:${config.adminPort}`].includes(req.headers.host) || !['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)) return send(res,403,{error:'Admin is available only on this computer.'});
     try {
+      if(req.method==='GET'&&['/favicon.ico','/__hub/favicon.svg'].includes(req.url))return send(res,200,fs.readFileSync(path.join(__dirname,'icon-hub.svg')),'image/svg+xml');
       if(req.method==='GET'&&req.url==='/api/status')return send(res,200,status());
       if(req.url?.startsWith('/api/service-config')) {
         if(!sameOrigin(req))return send(res,403,{error:'Use the local admin page.'});
@@ -127,6 +128,8 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         if (!req.url.startsWith('/')||req.url.startsWith('//')) return send(res,400,{error:'Invalid URL'});
         if(!sameOrigin(req))return send(res,403,{error:'Cross-origin requests are not allowed.'});
         const stored=config.services[d.id].password;
+        // Icons identify the service even before login; they contain no private data.
+        if(req.method==='GET'&&['/favicon.ico','/__hub/favicon.svg'].includes(req.url))return send(res,200,fs.readFileSync(path.join(__dirname,`icon-${d.id}.svg`)),'image/svg+xml');
         const cookies=Object.fromEntries((req.headers.cookie||'').split(';').map(x=>x.trim().split('=')));
         const session=sessions.get(cookies['techhub_'+d.id]);
         const authed=!stored||(session&&session.id===d.id&&session.expires>Date.now());

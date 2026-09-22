@@ -8,5 +8,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Tech Hub</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>../assets/TechHub.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../assets/TechHub.ico" LogicalName="TechHub.ico" />
+  </ItemGroup>
 </Project>

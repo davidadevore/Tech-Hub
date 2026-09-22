@@ -14,7 +14,14 @@ try {
  assert.notEqual(hub.config.adminPort,30700);assert.notEqual(hub.config.services.lux.port,30702);assert.notEqual(hub.config.services.dsan.backendPort,30711);
  const admin=`http://127.0.0.1:${hub.config.adminPort}`;
  assert.match(await fetch(admin+'/app.js').then(r=>r.text()),/Set password/);
- for(const s of hub.status().services){const r=await fetch(s.localURL);assert.equal(r.status,s.id==='lux'?401:200);}
+ for(const s of hub.status().services){
+   const r=await fetch(s.localURL);assert.equal(r.status,s.id==='lux'?401:200);
+   assert.match(await r.text(),/rel="icon"/);
+   const icon=await fetch(s.localURL+'/__hub/favicon.svg');assert.equal(icon.status,200);
+   assert.match(icon.headers.get('content-type'),/image\/svg\+xml/);
+   assert.equal(await icon.text(),fs.readFileSync(path.join(resources,'hub',`icon-${s.id}.svg`),'utf8'));
+ }
+ assert.equal(await fetch(admin+'/__hub/favicon.svg').then(r=>r.text()),fs.readFileSync(path.join(resources,'hub/icon-hub.svg'),'utf8'));
  const lux=hub.status().services.find(s=>s.id==='lux').localURL;
  const login=await fetch(lux+'/__hub/login',{method:'POST',body:new URLSearchParams({password:'smoke-test-only'}),redirect:'manual'});assert.equal(login.status,303);
  assert.equal((await fetch(lux,{headers:{Cookie:login.headers.get('set-cookie').split(';')[0]}})).status,200);
