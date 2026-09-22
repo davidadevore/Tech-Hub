@@ -30,11 +30,16 @@
         <button class="rescan" id="rescan" type="button">↻ Refresh interface list</button>
       </section>
       <section class="card">
-        <div class="step"><b>2</b><span><strong>SNMPv3 credentials</strong><small>Matches the read-only user configured on each switch.</small></span><em>SHA-512 + AES</em></div>
+        <div class="step"><b>2</b><span><strong>SNMPv3 credentials</strong><small>Matches the read-only user configured on each switch.</small></span><em id="levelBadge">SHA-512 + AES</em></div>
         <div class="fields">
           <label class="wide"><span>Username</span><input name="username" required placeholder="dashboard"></label>
-          <label><span>Authentication key</span><input name="authKey" type="password" minlength="8" autocomplete="new-password" placeholder="Enter authentication key"><small id="authHint">At least 8 characters.</small></label>
-          <label><span>Encryption key</span><input name="privKey" type="password" minlength="8" autocomplete="new-password" placeholder="Enter AES encryption key"><small id="privHint">At least 8 characters.</small></label>
+          <label class="wide"><span>Security level</span><div class="select-wrap"><select name="securityLevel" id="securityLevel">
+            <option value="authPriv">Authentication + encryption (authPriv)</option>
+            <option value="authNoPriv">Authentication only, no encryption (authNoPriv)</option>
+            <option value="noAuthNoPriv">None — no authentication, no encryption (noAuthNoPriv)</option>
+          </select></div><small>Match whatever the switch's SNMPv3 user is configured for. Only drop below authPriv on a trusted management network.</small></label>
+          <label id="authField"><span>Authentication key</span><input name="authKey" type="password" minlength="8" autocomplete="new-password" placeholder="Enter authentication key"><small id="authHint">At least 8 characters.</small></label>
+          <label id="privField"><span>Encryption key</span><input name="privKey" type="password" minlength="8" autocomplete="new-password" placeholder="Enter AES encryption key"><small id="privHint">At least 8 characters.</small></label>
         </div>
       </section>
       <section class="card compact-card">
