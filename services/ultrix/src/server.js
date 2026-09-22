@@ -29,6 +29,16 @@ export function createPanelServer({ getConfig, router, publicDir }) {
   const views = new Map();
   const activity = [];
   let lastRefreshAt = 0;
+  // Revert support: previousRoutes.get(dest) is that destination's full per-level source map as it was
+  // immediately before the most recent burst of changes (its own "one step back"). Rebuilt fresh each
+  // time a new burst starts (see the 750ms grouping below, which matches how `activity` entries group);
+  // a revert's own resulting changes start the next burst, so pressing Revert twice swaps back and forth.
+  // Caveat: the 750ms window exists to group one multi-level take's several level-events into a single
+  // burst, not to distinguish "same action" from "next action" - a revert fired within 750ms of the
+  // change it's undoing lands in that same burst and won't move previousRoutes, so a second revert
+  // right after (faster than any real button click) is a no-op rather than toggling further back.
+  const previousRoutes = new Map(); // dest -> Map<level, src>
+  const routeBursts = new Map(); // dest -> { startedAt, touchedLevels: Set<level> }
 
   const cfg = () => getConfig();
   const viewFor = (profile) => {
@@ -93,7 +103,7 @@ export function createPanelServer({ getConfig, router, publicDir }) {
 
   // ---- router events ----------------------------------------------------------------------
 
-  router.on('route', ({ dest, level, src, initial }) => {
+  router.on('route', ({ dest, level, src, previousSrc, initial }) => {
     if (initial) return;
     const now = Date.now();
     const last = activity.at(-1);
@@ -102,6 +112,18 @@ export function createPanelServer({ getConfig, router, publicDir }) {
     } else {
       activity.push({ t: now, dest, src, levels: [level] });
       if (activity.length > 100) activity.shift();
+    }
+    let burst = routeBursts.get(dest);
+    if (!burst || now - burst.startedAt > 750) {
+      burst = { startedAt: now, touchedLevels: new Set() };
+      routeBursts.set(dest, burst);
+      previousRoutes.set(dest, new Map());
+    } else {
+      burst.startedAt = now;
+    }
+    if (!burst.touchedLevels.has(level)) {
+      burst.touchedLevels.add(level);
+      previousRoutes.get(dest).set(level, previousSrc);
     }
     for (const client of clients) {
       const view = viewFor(client.profile);
@@ -169,6 +191,36 @@ export function createPanelServer({ getConfig, router, publicDir }) {
       return json(res, 200, { ok: true, changed, loadedAt });
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/revert') {
+      const view = viewFor(profile);
+      if (view.readOnly) return json(res, 403, { error: 'this profile is read-only' });
+      if (!router.ready) return json(res, 503, { error: `router is ${router.status}` });
+      const { dest } = await readJson(req);
+      if (!Number.isInteger(dest)) return json(res, 400, { error: 'dest must be an integer' });
+      if (!view.destSet.has(dest)) return json(res, 403, { error: 'destination not available' });
+      if (view.lockedDests.has(dest)) return json(res, 403, { error: 'destination is protected' });
+
+      const previous = previousRoutes.get(dest);
+      const entries = [...(previous ?? [])].filter(([level]) => view.levelSet.has(level));
+      if (!entries.length) return json(res, 404, { error: 'nothing to revert for this destination' });
+      const sources = new Set(entries.map(([, src]) => src));
+      for (const src of sources) {
+        if (src !== 0 && !view.sourceSet.has(src)) return json(res, 403, { error: 'the previous source for this destination is not available in this profile' });
+      }
+
+      const groups = new Map(); // src -> levels[]
+      for (const [level, src] of entries) {
+        if (!groups.has(src)) groups.set(src, []);
+        groups.get(src).push(level);
+      }
+      const results = [];
+      for (const [src, levels] of groups) {
+        if (src === 0) continue; // no prior source on this level (e.g. it was never routed before) - nothing to send
+        results.push({ src, levels, ...(await router.route({ dest, src, levels })) });
+      }
+      return json(res, 200, { ok: true, results });
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/take') {
       const view = viewFor(profile);
       if (view.readOnly) return json(res, 403, { error: 'this profile is read-only' });
@@ -220,7 +272,12 @@ export function createPanelServer({ getConfig, router, publicDir }) {
       views.clear();
       for (const client of clients) sse(client, 'config', {});
     },
-    listen: (port, host) => new Promise((resolve) => server.listen(port, host, () => resolve(server.address().port))),
+    listen: (port, host) => new Promise((resolve, reject) => {
+      const onError = (err) => { server.removeListener('listening', onListening); reject(err); };
+      const onListening = () => { server.removeListener('error', onError); resolve(server.address().port); };
+      server.once('error', onError);
+      server.listen(port, host, onListening);
+    }),
     close: () => new Promise((resolve) => {
       clearInterval(keepAlive);
       for (const c of clients) c.res.end();
