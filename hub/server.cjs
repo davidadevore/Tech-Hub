@@ -6,12 +6,16 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const {spawn} = require('node:child_process');
 const {supervise} = require('./supervisor.cjs');
+const serviceConfig = require('./service-config.cjs');
 const {promisify} = require('node:util');
 const scrypt = promisify(crypto.scrypt);
 const definitions = [
   {id:'dsan', name:'D’san Ready', detail:'Limitimer & PerfectCue', port:8701, backendPort:18701},
   {id:'lux', name:'Lux Link', detail:'Lighting network', port:8702, backendPort:18702},
   {id:'power', name:'Power Monitor', detail:'Power distribution', port:8703, backendPort:18703},
+  {id:'netgear', name:'NETGEAR AV Switchboard', detail:'Switch discovery & monitoring', port:8704, backendPort:18704},
+  {id:'record', name:'Record Monitor', detail:'HyperDeck & AJA Ki Pro', port:8705, backendPort:18705},
+  {id:'ultrix', name:'Ultrix Panel', detail:'Ross router control', port:8706, backendPort:18706},
 ];
 const root = path.resolve(__dirname, '..');
 function save(file, data) {
@@ -22,13 +26,18 @@ function loadConfig(dir) {
   fs.mkdirSync(dir,{recursive:true,mode:0o700});
   const file = path.join(dir,'config.json');
   const config = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file,'utf8')) : {adminPort:8700,host:'0.0.0.0',services:Object.fromEntries(definitions.map(d=>[d.id,{port:d.port,backendPort:d.backendPort,password:null}]))};
+  // Add new services without changing any existing port or password.
+  const occupied=new Set([config.adminPort,...Object.values(config.services||{}).flatMap(s=>[s.port,s.backendPort])]);
+  config.services ||= {};
+  const available=preferred=>{let port=preferred;while(occupied.has(port)&&port<65535)port++;if(occupied.has(port))throw Error('No available port for new service');occupied.add(port);return port;};
+  for(const d of definitions)if(!config.services[d.id])config.services[d.id]={port:available(d.port),backendPort:available(d.backendPort),password:null};
   const used = new Set();
   for (const port of [config.adminPort,...definitions.flatMap(d=>[config.services?.[d.id]?.port,config.services?.[d.id]?.backendPort])]) {
     if (!Number.isInteger(port)||port<1024||port>65535||used.has(port)) throw Error('Every admin, service, and internal port must be unique and between 1024 and 65535.');
     used.add(port);
   }
   if (!['0.0.0.0','127.0.0.1'].includes(config.host)) throw Error('host must be 0.0.0.0 or 127.0.0.1');
-  if (!fs.existsSync(file)) save(file,config);
+  save(file,config);
   return config;
 }
 async function hashPassword(value) { const salt=crypto.randomBytes(16).toString('hex'); return {salt,hash:(await scrypt(value,salt,32)).toString('hex')}; }
@@ -37,7 +46,7 @@ async function verifyPassword(value, stored) {
   const actual=await scrypt(value,stored.salt,32); return crypto.timingSafeEqual(actual,Buffer.from(stored.hash,'hex'));
 }
 function send(res,status,body,type='application/json') { res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY'}); res.end(type==='application/json'?JSON.stringify(body):body); }
-async function readBody(req) { let body=''; for await (const chunk of req) { body+=chunk; if(Buffer.byteLength(body)>8192) throw Error('Request too large'); } return body; }
+async function readBody(req) { let body=''; for await (const chunk of req) { body+=chunk; if(Buffer.byteLength(body)>65536) throw Error('Request too large'); } return body; }
 function sameOrigin(req) { return req.headers['sec-fetch-site']!=='cross-site' && (!req.headers.origin || req.headers.origin===`http://${req.headers.host}`); }
 function listen(server,port,host) { return new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,()=>{server.removeListener('error',reject);resolve();});}); }
 function close(server) { server.closeAllConnections(); return new Promise(resolve=>server.close(resolve)); }
@@ -45,6 +54,7 @@ function ips(host) { return host==='127.0.0.1'?[]:[...new Set(Object.values(os.n
 function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><style>:root{color-scheme:dark}body{background:#071015;color:#f2f7f5;font:16px system-ui;display:grid;place-items:center;min-height:95vh}main{width:min(360px,85vw)}main>p:first-child{color:#ff8a1f;font-weight:700;letter-spacing:.15em}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #31505a;font:inherit}input{background:#0c181e;color:#f2f7f5}button{background:#ff8a1f;color:#1b0d02;border-color:#ff8a1f;font-weight:650;cursor:pointer}button:hover{background:#ffa24f}input:focus-visible,button:focus-visible{outline:2px solid #ff8a1f;outline-offset:3px}p{color:#8ca3aa}p[role=alert]{color:#ff7a7a}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
 async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), launch=true}={}) {
   const config=loadConfig(dir), sessions=new Map(), attempts=new Map(), states=new Map(), servers=[],supervisors=new Map();
+  const activeResponses=new Map(definitions.map(d=>[d.id,new Set()]));
   let stopping=false;
   const startedAt=Date.now();
   const services=definitions.map(d=>({...d,...config.services[d.id]}));
@@ -69,13 +79,25 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
     throw Error(`No available TCP port for ${preferred}.`);
   }
   const logdir=path.join(dir,'logs'); fs.mkdirSync(logdir,{recursive:true,mode:0o700});
-  const invalidate=id=>{for(const [key,s] of sessions) if(s.id===id)sessions.delete(key);};
+  const invalidate=id=>{for(const [key,s] of sessions) if(s.id===id)sessions.delete(key);for(const response of activeResponses.get(id))response.destroy();};
   function status() {return {name:'Tech Hub',version:require('../package.json').version,adminPort:config.adminPort,startedAt,services:services.map(d=>({id:d.id,name:d.name,detail:d.detail,port:d.port,protected:!!config.services[d.id].password,localURL:`http://127.0.0.1:${d.port}`,urls:ips(config.host).map(ip=>`http://${ip}:${d.port}`),...states.get(d.id)}))};}
   for (const d of services) states.set(d.id,{state:'starting',error:null});
   const admin=http.createServer(async(req,res)=>{
     if (![`127.0.0.1:${config.adminPort}`,`localhost:${config.adminPort}`].includes(req.headers.host) || !['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)) return send(res,403,{error:'Admin is available only on this computer.'});
     try {
       if(req.method==='GET'&&req.url==='/api/status')return send(res,200,status());
+      if(req.url?.startsWith('/api/service-config')) {
+        if(!sameOrigin(req))return send(res,403,{error:'Use the local admin page.'});
+        const id=new URL(req.url,'http://localhost').searchParams.get('id');
+        if(req.method==='GET')return send(res,200,serviceConfig.read(dir,id));
+        if(req.method==='POST'){
+          if(!/^application\/json/.test(req.headers['content-type']||''))return send(res,400,{error:'JSON required'});
+          if(['starting','recovering'].includes(states.get(id)?.state))return send(res,409,{error:'Wait for service startup or recovery to finish before saving.'});
+          const value=JSON.parse(await readBody(req));serviceConfig.write(dir,id,value);
+          const supervisor=supervisors.get(id);if(supervisor){states.set(id,{state:'recovering',error:null});await supervisor.restart();}
+          return send(res,200,{ok:true});
+        }
+      }
       if(req.method==='GET'&&['/','/app.js','/style.css'].includes(req.url)) {
         const file=req.url==='/'?'index.html':req.url.slice(1); return send(res,200,fs.readFileSync(path.join(__dirname,file)),file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');
       }
@@ -123,9 +145,17 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         if(states.get(d.id).state!=='running')return send(res,503,{error:`${d.name} is unavailable. Check the Tech Hub master page.`,detail:states.get(d.id).error});
         if(req.url.startsWith('/api/update')&&d.id==='power')return send(res,200,{current_version:require('../package.json').version,available:false,error:'Power Monitor is bundled with Tech Hub. Update the complete app from the Tech Hub release page.'});
         const headers={...req.headers,host:`127.0.0.1:${d.backendPort}`}; delete headers.cookie;delete headers.authorization;
+        headers['x-techhub-local-client']=['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)?'1':'0';
+        // Preserve only Ultrix's profile session, never another service's cookies.
+        if(d.id==='ultrix'&&/^[a-f0-9]+$/.test(cookies.techhub_ultrix_profile||''))headers.cookie=`sid=${cookies.techhub_ultrix_profile}`;
         if(headers.origin)headers.origin=`http://127.0.0.1:${d.backendPort}`;
+        activeResponses.get(d.id).add(res);
+        const sessionTimer=stored&&session?setTimeout(()=>res.destroy(),Math.max(1,session.expires-Date.now())):null;
+        sessionTimer?.unref();
+        res.once('close',()=>{clearTimeout(sessionTimer);activeResponses.get(d.id).delete(res);});
         const upstream=http.request({hostname:'127.0.0.1',port:d.backendPort,path:req.url,method:req.method,headers},response=>{
           const outgoing={...response.headers};delete outgoing['set-cookie'];
+          if(d.id==='ultrix'&&response.headers['set-cookie'])outgoing['set-cookie']=response.headers['set-cookie'].filter(c=>c.startsWith('sid=')).map(c=>c.replace(/^sid=/,'techhub_ultrix_profile='));
           res.writeHead(response.statusCode,outgoing);response.pipe(res);
         });
         upstream.setTimeout(120000,()=>upstream.destroy(Error('Service timeout')));
@@ -144,6 +174,11 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
     if(d.id==='dsan'){command=path.join(resources,'dsan',process.platform==='win32'?'dsan-server.exe':'dsan-server');args=[];}
     if(d.id==='power'){command=path.join(resources,process.platform==='win32'?'power-server.exe':'power-server');args=['--host','127.0.0.1','--port',String(d.backendPort),'--config',path.join(dataDir,'settings.json'),'--no-browser'];}
     if(d.id==='lux'){command=process.execPath;args=[path.join(__dirname,'lux-server.cjs'),path.join(resources,'lux')];}
+    if(d.id==='netgear'){command=process.execPath;args=[path.join(resources,'netgear','collector','server.mjs')];}
+    if(['record','ultrix'].includes(d.id)){
+      serviceConfig.read(dir,d.id);
+      command=process.execPath;args=[path.join(resources,d.id,d.id==='record'?'server.js':'src/main.js'),'--config',serviceConfig.file(dir,d.id)];
+    }
     const logPath=path.join(logdir,d.id+'.log');
     if(fs.existsSync(logPath)&&fs.statSync(logPath).size>5*1024*1024)fs.renameSync(logPath,logPath+'.previous');
     supervisors.set(d.id,supervise({

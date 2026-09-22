@@ -1,6 +1,6 @@
 # Tech Hub
 
-One desktop application for **D’san Ready**, **Lux Link**, and **Power Monitor**. Tech Hub runs all three services and provides a local master page with their status, ports, and shareable network URLs.
+One desktop application for **D’san Ready**, **Lux Link**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, and **Ultrix Panel**. Tech Hub runs all six services and provides a local master page with their status, ports, and shareable network URLs.
 
 ## Downloads
 
@@ -45,6 +45,21 @@ This initial build is **ad-hoc signed, not Apple Developer ID signed or notarize
 | D’san Ready | `http://127.0.0.1:8701` | Limitimer, PerfectCue, full-screen view at `/full` |
 | Lux Link | `http://127.0.0.1:8702` | Lighting devices, sACN and Art-Net monitoring |
 | Power Monitor | `http://127.0.0.1:8703` | Power devices, phases, services, and alerts |
+| NETGEAR AV Switchboard | `http://127.0.0.1:8704` | SNMPv3 switch discovery, ports, VLAN monitoring, topology |
+| Record Monitor | `http://127.0.0.1:8705` | HyperDeck and AJA Ki Pro status and transport controls |
+| Ultrix Panel | `http://127.0.0.1:8706` | Ross SW-P-08 routing, profiles, and live crosspoints |
+
+### Configure the new services
+
+Use **Configure switches** on the NETGEAR card to enter the management subnet and SNMPv3 credentials. Setup stays local to the host computer. The collector and dashboard share the service port; no separate port 8787 is needed. VLAN/profile assignment remains read-only.
+
+Use **Configure** on Record Monitor to edit its JSON settings. Add entries to `devices`, for example `{"name":"Recorder","type":"hyperdeck","host":"192.168.1.50"}`. Use `kipro` for AJA units. Recording controls default to the host computer only (`controlLocalOnly`); disk formatting is disabled (`allowFormat: false`). Saving restarts only Record Monitor. See its [device options](services/record/README.md).
+
+Use **Configure** on Ultrix Panel to enter `router.host`, confirm its SW-P-08 TCP port, and set levels, visibility rules, and profiles. A blank host keeps it disconnected. The initial configuration has one Video level and operator/viewer profiles; customize these for the router before using TAKE. You can paste an existing Ultrix configuration into this editor. See the [Ultrix configuration guide](services/ultrix/README.md). Facility configuration and exported router names are not included in public downloads.
+
+All six services use the same port-conflict avoidance, password gates, logs, and individual restart controls. Existing Tech Hub ports and passwords survive upgrades. Power Monitor runs without a separate Windows tray icon when launched by Tech Hub; the standalone Power Monitor app retains its own tray.
+
+See [third-party notices and source attribution](THIRD_PARTY.md).
 
 For another computer, replace `127.0.0.1` with the Tech Hub computer’s LAN IP. The master page lists each available IPv4 network address and offers a Copy button. The service pages do not include navigation to the other services or master page.
 
@@ -72,7 +87,7 @@ Each service has an optional, independent password, configured using **Set passw
 
 New installs allow access without a password until configured. **Separate URLs and ports are not authorization by themselves.** Anyone on the same network can try another port. Set service passwords when visibility must be restricted. These are HTTP interfaces: traffic and passwords are not encrypted in transit. Use a trusted show LAN; use an HTTPS gateway or VPN for untrusted networks.
 
-The underlying servers listen only on `127.0.0.1` (default ports `18701–18703`); remote clients cannot bypass the service gateways. Local users of the host computer can reach those internal servers and are trusted administrators. A service password grants access to that service’s existing controls, not a new read-only role. Set passwords in Tech Hub; D’san’s inherited standalone network-auth setting is not used behind Tech Hub’s loopback gateway.
+The underlying servers listen only on `127.0.0.1` (default ports `18701–18706`); remote clients cannot bypass the service gateways. Local users of the host computer can reach those internal servers and are trusted administrators. A service password grants access to that service’s existing controls, not a new read-only role. Ultrix additionally supports its own viewer profiles and PINs. Set service passwords in Tech Hub; D’san’s inherited standalone network-auth setting is not used behind Tech Hub’s loopback gateway.
 
 ## Data, updates, and troubleshooting
 
@@ -98,10 +113,11 @@ python3 -m venv .venv
 cd services/lux
 pnpm install --frozen-lockfile
 cd ../..
+pnpm --dir services/netgear install --frozen-lockfile
 PYTHON_BINARY="$PWD/.venv/bin/python" bash scripts/build-mac.sh
 ```
 
-The build creates `dist/Tech Hub.app`, `dist/Tech-Hub-macOS-arm64.dmg`, and its checksum. Set `NODE_BINARY` or `GO_BINARY` to override compiler/runtime paths. The source includes the three applications and their regression tests; their individual documentation remains under `services/`.
+The build creates `dist/Tech Hub.app`, `dist/Tech-Hub-macOS-arm64.dmg`, and its checksum. Set `NODE_BINARY` or `GO_BINARY` to override compiler/runtime paths. The source includes the six applications and their regression tests; their individual documentation remains under `services/`.
 
 ```sh
 node --test tests/*.test.cjs
@@ -117,6 +133,7 @@ On Windows x64, install Node.js 24, Go 1.26, Python 3.12, .NET SDK 10, pnpm 11.1
 ```powershell
 python -m pip install -r requirements-build.txt
 pnpm --dir services/lux install --frozen-lockfile
+pnpm --dir services/netgear install --frozen-lockfile
 ./scripts/build-windows.ps1
 ```
 

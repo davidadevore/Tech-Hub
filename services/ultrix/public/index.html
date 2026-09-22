@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e1116">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Router Panel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1 id="title">Router</h1>
+    <select id="profile" aria-label="Profile" hidden></select>
+    <span id="status" class="pill" role="status">connecting</span>
+  </header>
+
+  <nav class="tabs" aria-label="Views">
+    <button class="tab" data-tab="route" aria-selected="true">Route</button>
+    <button class="tab" data-tab="activity" aria-selected="false">Activity</button>
+  </nav>
+
+  <main>
+    <section id="route">
+      <button class="slot" id="dstSlot" type="button">
+        <span class="slot-label">Destination</span>
+        <span class="slot-name" id="dstName">Choose destination</span>
+        <span class="slot-now" id="dstNow"></span>
+      </button>
+      <div class="arrow" aria-hidden="true">▼</div>
+      <button class="slot" id="srcSlot" type="button">
+        <span class="slot-label">Source</span>
+        <span class="slot-name" id="srcName">Choose source</span>
+        <span class="slot-now" id="srcNow"></span>
+      </button>
+
+      <div class="levels" id="levels" role="group" aria-label="Levels to route"></div>
+      <label class="auto"><input type="checkbox" id="auto"> Take as soon as a source is chosen</label>
+      <div class="namesrow">
+        <span id="namesInfo">Names not loaded</span>
+        <button type="button" id="refreshNames">Refresh names</button>
+      </div>
+    </section>
+
+    <section id="activity" hidden>
+      <p class="empty" id="activityEmpty">No route changes since the panel started.</p>
+      <ol class="activity-list" id="activityList"></ol>
+    </section>
+  </main>
+
+  <footer class="takebar">
+    <button id="take" type="button" disabled>
+      <span id="takeMain">TAKE</span>
+      <span id="takeSub"></span>
+    </button>
+  </footer>
+
+  <dialog id="picker" aria-labelledby="pickerTitle">
+    <header>
+      <h2 id="pickerTitle">Select</h2>
+      <button type="button" class="close" id="pickerClose" aria-label="Close">✕</button>
+    </header>
+    <input id="search" type="search" placeholder="Search name or number" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search">
+    <div class="chips" id="chips" role="group" aria-label="Category"></div>
+    <ul class="list" id="list"></ul>
+  </dialog>
+
+  <dialog id="login" aria-labelledby="loginTitle">
+    <form method="dialog" id="loginForm">
+      <h2 id="loginTitle">PIN required</h2>
+      <p id="loginProfile"></p>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off" aria-label="PIN" required>
+      <p class="error" id="loginError" role="alert"></p>
+      <div class="row">
+        <button type="button" id="loginCancel">Cancel</button>
+        <button type="submit" class="primary">Unlock</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

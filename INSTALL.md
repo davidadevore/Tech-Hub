@@ -4,7 +4,7 @@ Requires an Apple silicon Mac (M1 or later) running macOS 13 or later.
 
 1. Open the disk image and drag Tech Hub into Applications.
 2. Open Tech Hub from Applications. The TH menu appears in the menu bar.
-3. Choose Open Master Page. It shows the status and URLs for all three services.
+3. Choose Open Master Page. It shows the status and URLs for all six services.
 4. Allow Local Network access if macOS asks. If using the macOS firewall, allow
    incoming connections for Tech Hub when sharing dashboards with other computers.
 5. Use each service’s settings to add your devices. New installs start empty.

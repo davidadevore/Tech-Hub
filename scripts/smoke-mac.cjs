@@ -19,5 +19,5 @@ const {startHub,loadConfig}=require('../hub/server.cjs');
   const power=await fetch('http://127.0.0.1:8703/api/status').then(r=>r.json());assert.deepEqual(power.devices,[]);
   console.log('PASS: all packaged dashboards, D’san full-screen, public port metadata, and empty defaults.');
   if(process.argv.includes('--preview')) { console.log('PREVIEW_READY http://127.0.0.1:8700');await new Promise(resolve=>{process.once('SIGINT',resolve);process.once('SIGTERM',resolve);}); }
- }finally{await hub.stop();for(const port of [8700,8701,8702,8703,18701,18702,18703]){await assert.rejects(fetch(`http://127.0.0.1:${port}`,{signal:AbortSignal.timeout(500)}));}console.log('PASS: all seven listeners stopped.');fs.rmSync(dir,{recursive:true,force:true});}
+ }finally{await hub.stop();for(const port of [8700,8701,8702,8703,8704,8705,8706,18701,18702,18703,18704,18705,18706]){await assert.rejects(fetch(`http://127.0.0.1:${port}`,{signal:AbortSignal.timeout(500)}));}console.log('PASS: all thirteen listeners stopped.');fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

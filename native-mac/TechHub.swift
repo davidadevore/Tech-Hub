@@ -64,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let json = data.flatMap { try? JSONSerialization.jsonObject(with:$0) as? [String:Any] }
             let services = json?["services"] as? [[String:Any]]
             let count = services?.filter { $0["state"] as? String == "running" }.count
-            DispatchQueue.main.async { if !self.quitting { self.rebuild(count.map { "\($0) of 3 services online · :\(self.port)" } ?? "Starting or unavailable — open logs") } }
+            DispatchQueue.main.async { if !self.quitting { self.rebuild(count.map { "\($0) of \(services?.count ?? 0) services online · :\(self.port)" } ?? "Starting or unavailable — open logs") } }
         }.resume()
     }
     @objc private func openMaster() { guard let port = currentMasterPort() else { rebuild("Starting or unavailable — open logs"); return }; NSWorkspace.shared.open(URL(string:"http://127.0.0.1:\(port)")!) }

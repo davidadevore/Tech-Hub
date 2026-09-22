@@ -14,3 +14,10 @@ services/lux/.wrangler/
 
 native-windows/bin/
 native-windows/obj/
+services/netgear/.next/
+services/netgear/out/
+services/netgear/next-env.d.ts
+services/netgear/*.tsbuildinfo
+services/netgear/collector/.env
+services/netgear/collector/*cache.json
+services/netgear/collector/color-scheme.json

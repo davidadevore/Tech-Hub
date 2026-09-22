@@ -1750,7 +1750,7 @@ func main() {
 	if !*noBrowser && startErr == nil {
 		time.AfterFunc(400*time.Millisecond, func() { openBrowser(controller.LocalURL()) })
 	}
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && os.Getenv("TECH_HUB_MANAGED") != "1" {
 		if err := runTray(controller, monitor, updater, startErr); err != nil {
 			log.Printf("Tray error: %v", err)
 		}

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Netgear Discovery Settings</title>
+  <link rel="stylesheet" href="/setup.css">
+</head>
+<body>
+  <div class="ambient one"></div>
+  <div class="ambient two"></div>
+  <main>
+    <nav>
+      <div class="identity"><span class="logo">N</span><span><b>NETGEAR</b><small>DISCOVERY</small></span></div>
+      <span class="local"><i></i>LOCAL SETTINGS</span>
+    </nav>
+    <header>
+      <span class="kicker">TECH HUB COLLECTOR</span>
+      <h1>Server settings</h1>
+      <p>Connect the switch network, secure SNMP access, and choose how clients reach the dashboard.</p>
+    </header>
+    <form id="settings">
+      <section class="card">
+        <div class="step"><b>1</b><span><strong>Network paths</strong><small>Choose a detected interface for each side of the server.</small></span></div>
+        <div class="fields">
+          <label class="wide"><span>Switch management subnet</span><input name="subnet" required placeholder="10.1.0.0/24"><small>The address range containing the NETGEAR switches.</small></label>
+          <label><span>Switch-facing interface</span><div class="select-wrap"><select name="sourceAddress" id="sourceAddress"><option value="">Detect automatically</option></select></div><small>SNMP traffic leaves through this adapter.</small></label>
+          <label><span>Client-facing interface</span><div class="select-wrap"><select name="bindAddress" id="bindAddress"><option value="0.0.0.0">All available interfaces</option></select></div><small>Tech Hub manages client access. Use the service URL on its master page.</small></label>
+        </div>
+        <button class="rescan" id="rescan" type="button">↻ Refresh interface list</button>
+      </section>
+      <section class="card">
+        <div class="step"><b>2</b><span><strong>SNMPv3 credentials</strong><small>Matches the read-only user configured on each switch.</small></span><em>SHA-512 + AES</em></div>
+        <div class="fields">
+          <label class="wide"><span>Username</span><input name="username" required placeholder="dashboard"></label>
+          <label><span>Authentication key</span><input name="authKey" type="password" minlength="8" autocomplete="new-password" placeholder="Enter authentication key"><small id="authHint">At least 8 characters.</small></label>
+          <label><span>Encryption key</span><input name="privKey" type="password" minlength="8" autocomplete="new-password" placeholder="Enter AES encryption key"><small id="privHint">At least 8 characters.</small></label>
+        </div>
+      </section>
+      <section class="card compact-card">
+        <div class="step"><b>3</b><span><strong>Live polling</strong><small>How often the dashboard refreshes switch information.</small></span></div>
+        <label class="poll"><span>Polling interval</span><div class="select-wrap"><select name="pollSeconds"><option value="15">Every 15 seconds</option><option value="30">Every 30 seconds</option><option value="60">Every minute</option><option value="300">Every 5 minutes</option></select></div></label>
+      </section>
+      <div id="message" role="status"></div>
+      <div class="actions"><a href="/">Cancel</a><button type="submit"><span>Save settings &amp; scan</span><i>→</i></button></div>
+    </form>
+    <footer><span>●</span> SNMP credentials stay on this computer and are never exposed to dashboard clients.</footer>
+  </main>
+  <script src="/setup.js"></script>
+</body>
+</html>

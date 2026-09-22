@@ -1,0 +1,29 @@
+{
+  "title": "Record Monitor (DEMO)",
+  "port": 8080,
+  "pollIntervalMs": 1000,
+  "warnFreePercent": 20,
+  "criticalFreePercent": 10,
+  "devices": [
+    { "name": "HyperDeck 1", "type": "hyperdeck", "host": "127.0.0.1", "port": 19101, "restPort": 19151 },
+    { "name": "HyperDeck 2", "type": "hyperdeck", "host": "127.0.0.1", "port": 19102, "restPort": 19152 },
+    { "name": "HyperDeck 3", "type": "hyperdeck", "host": "127.0.0.1", "port": 19103, "restPort": 19153 },
+    { "name": "HyperDeck 4", "type": "hyperdeck", "host": "127.0.0.1", "port": 19104, "restPort": 19999, "fullCapacityMinutes": 240 },
+    { "name": "HyperDeck 5", "type": "hyperdeck", "host": "127.0.0.1", "port": 19105, "restPort": 19999 },
+    { "name": "HyperDeck 6", "type": "hyperdeck", "host": "127.0.0.1", "port": 19199 },
+    {
+      "name": "Ki Pro 1", "type": "kipro", "host": "127.0.0.1", "port": 19201,
+      "media": [
+        { "label": "SSD 1", "freePercent": "eParamID_DemoFree1", "remainingMinutes": "eParamID_DemoMin1" },
+        { "label": "SSD 2", "freePercent": "eParamID_DemoFree2", "remainingMinutes": "eParamID_DemoMin2" }
+      ]
+    },
+    {
+      "name": "Ki Pro 2", "type": "kipro", "host": "127.0.0.1", "port": 19202,
+      "media": [
+        { "label": "SSD 1", "freePercent": "eParamID_DemoFree1", "remainingMinutes": "eParamID_DemoMin1" },
+        { "label": "SSD 2", "freePercent": "eParamID_DemoFree2", "remainingMinutes": "eParamID_DemoMin2" }
+      ]
+    }
+  ]
+}

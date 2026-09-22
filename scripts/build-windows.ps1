@@ -20,6 +20,9 @@ Copy-Item services/lux/package.json "$resources/lux/package.json"
 Copy-Item (Get-Command node).Source "$resources/node.exe"
 Copy-Item hub "$resources/hub" -Recurse
 Copy-Item package.json "$resources/package.json"
+Push-Location services/netgear
+try { Checked { node node_modules/next/dist/bin/next build } } finally { Pop-Location }
+Checked { node scripts/bundle-services.cjs $resources }
 $compiler = "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe"
 if (!(Test-Path $compiler)) { throw 'Install Inno Setup 6 before building the installer.' }
 Checked { & $compiler "/DAppVersion=$version" scripts/windows-installer.iss }

@@ -1,0 +1,15 @@
+{
+  "name": "ultrix-panel",
+  "version": "0.1.0",
+  "description": "Mobile web panel for Ross Ultrix routers over SW-P-08",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test test/*.test.js",
+    "dump": "node src/dump-names.js"
+  }
+}

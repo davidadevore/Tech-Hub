@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Record Monitor</title>
+<style>
+  :root {
+    --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #6f6d67;
+    --hair: #e1e0d9; --accent: #2a78d6;
+    --rec: #d03b3b; --warn: #fab219; --crit: #d03b3b; --ok: #0ca30c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #a09e96;
+      --hair: #2c2c2a; --accent: #3987e5;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #a09e96;
+    --hair: #2c2c2a; --accent: #3987e5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 15px/1.4 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  }
+  main { max-width: 1900px; margin: 0 auto; padding: 12px 14px 16px; }
+
+  header.top { display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: .01em; white-space: nowrap; }
+  .right { margin-left: auto; display: flex; align-items: center; white-space: nowrap; }
+  .ver { color: var(--muted); font-size: 11.5px; margin-right: 12px; }
+  .clock { color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .conn { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; font-size: 13px; }
+  .conn i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+  .conn.bad i { background: var(--crit); }
+
+  .banner { display: none; margin: 10px 0 0; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--crit); color: var(--ink); background: color-mix(in srgb, var(--crit) 14%, var(--surface)); }
+  .banner.show { display: block; }
+
+  .summary { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--hair); color: var(--ink-2); font-size: 13px; }
+  .chip b { color: var(--ink); font-size: 15px; font-weight: 600; }
+  .chip svg { flex: none; }
+  .chip.alert { border-color: var(--warn); }
+  .chip.alert.crit { border-color: var(--crit); }
+
+  .grid { display: grid; gap: 10px; grid-template-columns: 1fr; margin-top: 12px; }
+  @media (min-width: 680px)  { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1000px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 1300px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .card { background: var(--surface); border: 1px solid var(--hair); border-radius: 10px; padding: 9px 12px 10px;
+    border-top: 4px solid var(--hair); display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .card[data-status="recording"] { border-top-color: var(--rec); }
+  .card[data-status="offline"] { border-top-style: dashed; border-top-color: var(--muted);
+    background-image: repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--muted) 10%, transparent) 9px 10px); }
+  .card[data-status="offline"] .slots, .card[data-status="offline"] .meta { opacity: .45; }
+
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .card-head h3 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.2; }
+  .sub { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 6px;
+    font-size: 12px; font-weight: 700; letter-spacing: .06em; border: 1px solid var(--hair); color: var(--ink-2); white-space: nowrap; }
+  .card[data-status="recording"] .badge { background: var(--rec); border-color: var(--rec); color: #fff; }
+  .card[data-status="recording"] .badge .dot { animation: pulse 1.2s ease-in-out infinite; }
+  .card[data-status="offline"] .badge { border-style: dashed; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .card .badge .dot { animation: none !important; } }
+
+  .meta { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--ink-2); font-size: 12.5px; }
+  .meta span { font-variant-numeric: tabular-nums; }
+
+  .slots { display: flex; flex-direction: column; gap: 8px; }
+  .slot { display: flex; flex-direction: column; gap: 3px; }
+  .slot-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--ink-2); min-height: 18px; }
+  .slot-left { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .slot-label { white-space: nowrap; }
+  .vol { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag { margin-left: 5px; padding: 0 5px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em;
+    color: var(--ink); border: 1px solid var(--ink-2); }
+  .slot-right { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .gauge-row { display: flex; align-items: center; gap: 10px; }
+  .meter { flex: 1; height: 9px; border-radius: 5px; overflow: hidden;
+    background: color-mix(in srgb, var(--fill) 22%, var(--surface)); --fill: var(--accent); }
+  .meter i { display: block; height: 100%; width: 0; background: var(--fill); border-radius: 0 5px 5px 0; transition: width .6s ease; }
+  .slot[data-sev="warn"] .meter { --fill: var(--warn); }
+  .slot[data-sev="crit"] .meter { --fill: var(--crit); }
+  .slot[data-sev="none"] .meter i, .slot[data-sev="empty"] .meter i { width: 0 !important; }
+  .pct { min-width: 78px; text-align: right; font-size: 22px; font-weight: 600; line-height: 1; }
+  .pct small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 2px; }
+  .sev { display: none; align-items: center; gap: 4px; font-weight: 700; letter-spacing: .05em; font-size: 11.5px; color: var(--ink); }
+  .slot[data-sev="warn"] .sev, .slot[data-sev="crit"] .sev { display: inline-flex; }
+  .slot[data-sev="warn"] .sev svg { color: var(--warn); }
+  .slot[data-sev="crit"] .sev svg { color: var(--crit); }
+  /* controls */
+  button { font: inherit; color: inherit; }
+  .badge { background: transparent; cursor: default; }
+  .badge:not(:disabled) { cursor: pointer; }
+  .badge:not(:disabled):hover { border-color: var(--ink-2); }
+  .badge:focus-visible, .mini:focus-visible, .ab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .badge .b-act { display: none; }
+  .badge:not(:disabled):hover .b-main { display: none; }
+  .badge:not(:disabled):hover .b-act { display: inline-flex; align-items: center; gap: 6px; }
+  .badge .b-main { display: inline-flex; align-items: center; gap: 6px; }
+  .card[data-status] .badge[data-armed] { background: var(--warn); border-color: var(--warn); color: #000; }
+  .badge[data-armed] .b-main { display: inline-flex; }
+  .badge[data-armed] .b-act { display: none !important; }
+  .badge[data-armed]:hover .b-main { display: inline-flex; }
+  .badge:disabled { opacity: 1; }
+  .badge.busy { opacity: .6; pointer-events: none; }
+  .mini { padding: 0 6px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; background: transparent;
+    border: 1px dashed var(--muted); color: var(--ink-2); cursor: pointer; margin-left: 5px; }
+  .mini:hover:not(:disabled) { border-style: solid; border-color: var(--accent); color: var(--ink); }
+  .mini:disabled { opacity: .4; cursor: not-allowed; }
+  .mini.fmt { margin-left: 0; border-color: var(--hair); color: var(--muted); }
+  .mini.fmt:hover:not(:disabled) { border-color: var(--crit); color: var(--ink); background: color-mix(in srgb, var(--crit) 16%, transparent); }
+  dialog p.danger { margin: 4px 0 8px; font-weight: 600; }
+  dialog button.go:disabled { opacity: .5; cursor: not-allowed; }
+  .allctl { display: flex; gap: 8px; }
+  .allctl[hidden] { display: none; }
+  .ab { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 700;
+    letter-spacing: .06em; background: var(--surface); border: 1px solid var(--ink-2); color: var(--ink); cursor: pointer; }
+  .ab:hover { background: color-mix(in srgb, var(--ink) 8%, var(--surface)); }
+  dialog { border: 1px solid var(--ink-2); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 18px 20px; max-width: 460px; width: calc(100% - 32px); }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h4 { margin: 0 0 6px; font-size: 17px; }
+  dialog ul { margin: 8px 0 14px; padding-left: 20px; color: var(--ink-2); font-size: 14px; }
+  dialog .btns { display: flex; justify-content: flex-end; gap: 10px; }
+  dialog button { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--ink-2); background: transparent; cursor: pointer; font-weight: 600; }
+  dialog button.go { background: var(--rec); border-color: var(--rec); color: #fff; }
+  #toasts { position: fixed; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 8px; z-index: 10; max-width: min(420px, calc(100% - 28px)); }
+  .toast { padding: 9px 13px; border-radius: 8px; background: var(--surface); border: 1px solid var(--ink-2); font-size: 13.5px; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+  .toast.bad { border-color: var(--crit); }
+  .toast div + div { margin-top: 3px; }
+  .note { font-size: 12px; color: var(--muted); }
+  .note:empty { display: none; }
+  .stale main { opacity: .55; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1 id="title">Record Monitor</h1>
+    <section class="summary" id="summary" aria-live="polite"></section>
+    <div class="allctl" id="allctl" hidden><button class="ab" data-act="all-record">ALL START</button><button class="ab" data-act="all-stop">ALL STOP</button></div>
+    <div class="right"><span class="ver" id="ver"></span><span class="clock" id="clock"></span><span class="conn" id="conn"><i></i><span>connecting…</span></span></div>
+  </header>
+  <div class="banner" id="banner" role="alert">Lost contact with the dashboard server. Showing last known data, which is out of date.</div>
+  <section class="grid" id="grid"></section>
+  <div id="toasts" aria-live="polite"></div>
+  <dialog id="confirm"><h4 id="c-title"></h4><div id="c-body"></div><div class="btns"><button id="c-cancel" autofocus>Cancel</button><button id="c-go" class="go"></button></div></dialog>
+</main>
+
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  if (q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
+
+  const ICON = {
+    rec:     '<svg class="dot" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>',
+    stop:    '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="0.5" y="0.5" width="9" height="9" rx="1" fill="currentColor"/></svg>',
+    play:    '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 0.5 9.5 5 1 9.5z" fill="currentColor"/></svg>',
+    pause:   '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 0.5h2.5v9h-2.5zM6 0.5h2.5v9H6z" fill="currentColor"/></svg>',
+    standby: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+    offline: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1l8 8M9 1 1 9" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>',
+    unknown: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5a3 3 0 1 1 4 2.8c-.7.3-1 .8-1 1.7" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>',
+    warn:    '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13.5 12.5h-13z" fill="currentColor"/><path d="M7 5.5v3.2M7 10v.1" stroke="#000" stroke-width="1.4"/></svg>',
+    crit:    '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6.5" fill="currentColor"/><path d="M4.2 4.2l5.6 5.6M9.8 4.2 4.2 9.8" stroke="#fff" stroke-width="1.6"/></svg>',
+  };
+  const LABEL = { recording: 'REC', stopped: 'STOPPED', playing: 'PLAYING', paused: 'PAUSED',
+    standby: 'STANDBY', offline: 'OFFLINE', unknown: 'UNKNOWN' };
+  const ICON_FOR = { recording: 'rec', stopped: 'stop', playing: 'play', paused: 'pause',
+    standby: 'standby', offline: 'offline', unknown: 'unknown' };
+
+  const WHY = { ECONNREFUSED: 'connection refused (is the unit on and control enabled?)',
+    EHOSTUNREACH: 'unreachable on the network', EHOSTDOWN: 'no response from this address (powered off, or wrong IP?)', ENETUNREACH: 'unreachable on the network',
+    ETIMEDOUT: 'timed out', timeout: 'timed out', 'no data (timeout)': 'stopped responding' };
+  const $ = (id) => document.getElementById(id);
+  const cards = new Map();
+  const armed = {};
+  const busy = new Set();
+  let ctl = { enabled: false }, lastData = null;
+  const setHTML = (n, html) => { if (n._h !== html) { n._h = html; n.innerHTML = html; } };
+
+  function el(tag, cls, html) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+  function dur(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    return h ? `${h}h ${String(m).padStart(2, '0')}m` : m ? `${m}m ${String(r).padStart(2, '0')}s` : `${r}s`;
+  }
+  function remaining(sec) {
+    if (sec == null) return '';
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+    return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
+  }
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  function makeCard(d) {
+    const c = el('article', 'card');
+    c.innerHTML = `
+      <div class="card-head">
+        <div><h3></h3><div class="sub"></div></div>
+        <button type="button" class="badge" data-act="toggle"></button>
+      </div>
+      <div class="meta"></div>
+      <div class="slots"></div>
+      <div class="note"></div>`;
+    return c;
+  }
+
+  function slotSeverity(slot, th) {
+    if (!slot.mounted) return slot.state === 'empty' ? 'empty' : 'none';
+    if (slot.freePercent == null) return 'none';
+    if (slot.freePercent <= th.critical) return 'crit';
+    if (slot.freePercent <= th.warn) return 'warn';
+    return 'ok';
+  }
+
+  function renderSlot(node, d, slot, th) {
+    const sev = slotSeverity(slot, th);
+    const est = slot.percentSource === 'estimated';
+    const pct = slot.freePercent;
+    node.dataset.sev = sev;
+    const active = d.activeSlot != null && d.activeSlot == slot.id && d.type === 'hyperdeck';
+    const recording = d.status === 'recording';
+    const canSwitch = ctl.enabled && d.online && !d.formatting && d.type === 'hyperdeck' && slot.mounted && !active;
+    setHTML(node.querySelector('.slot-label'), esc(slot.label) + (active ? '<span class="tag">ACTIVE</span>'
+      : canSwitch ? `<button type="button" class="mini" data-act="slot" data-id="${esc(d.id)}" data-slot="${esc(slot.id)}" ${recording ? 'disabled title="Cannot switch slots while recording"' : 'title="Make this the active recording slot"'}>MAKE ACTIVE</button>` : ''));
+    node.querySelector('.vol').textContent = slot.volume || '';
+    node.querySelector('.meter i').style.width = pct == null ? '0%' : pct + '%';
+    const m = node.querySelector('.meter');
+    if (pct == null) m.removeAttribute('aria-valuenow'); else m.setAttribute('aria-valuenow', Math.round(pct));
+    m.setAttribute('aria-label', `${slot.label} free space`);
+    const pe = node.querySelector('.pct');
+    pe.innerHTML = pct == null
+      ? `<small>${slot.state === 'empty' ? 'No media' : 'n/a'}</small>`
+      : `${est ? '~' : ''}${Math.round(pct)}<small>% free</small>`;
+    pe.title = est ? 'Estimated from remaining record time (this unit does not report drive capacity)' : '';
+    const canFormat = ctl.enabled && ctl.allowFormat && d.online && !d.formatting && slot.mounted;
+    setHTML(node.querySelector('.slot-fmt'), canFormat
+      ? `<button type="button" class="mini fmt" data-act="format" data-id="${esc(d.id)}" data-slot="${esc(slot.id)}" ${d.status === 'stopped' ? 'title="Erase and format this drive"' : 'disabled title="Stop the unit before formatting"'}>FORMAT</button>` : '');
+    const left = slot.remainingSec != null ? `${remaining(slot.remainingSec)} left` : '';
+    node.querySelector('.remain').textContent = left;
+    const sevEl = node.querySelector('.sev');
+    sevEl.innerHTML = (sev === 'crit' ? ICON.crit + 'CRITICAL' : sev === 'warn' ? ICON.warn + 'LOW' : '');
+  }
+
+  function render(data) {
+    const th = data.thresholds;
+    ctl = data.control || { enabled: false };
+    lastData = data;
+    $('allctl').hidden = !ctl.enabled;
+    $('title').textContent = data.title;
+    $('ver').textContent = data.version || 'old server build';
+    document.title = data.title;
+    const counts = { recording: 0, stopped: 0, offline: 0 };
+    const low = [];
+
+    for (const d of data.devices) {
+      let c = cards.get(d.id);
+      if (!c) {
+        c = { root: makeCard(d), slotNodes: [], slotKey: '' };
+        cards.set(d.id, c);
+        $('grid').appendChild(c.root);
+      }
+      const r = c.root;
+      r.dataset.status = d.status;
+      r.querySelector('h3').textContent = d.name;
+      r.querySelector('.sub').textContent = [d.host, d.model || (d.type === 'kipro' ? 'AJA Ki Pro' : null)].filter(Boolean).join(' · ');
+      const badge = r.querySelector('.badge');
+      const canAct = ctl.enabled && d.online && !d.formatting && (d.status === 'recording' || d.status === 'stopped');
+      const armedNow = d.status === 'recording' && armed[d.id] && Date.now() - armed[d.id] < 3000;
+      const icon = ICON[ICON_FOR[d.status]] || '';
+      const actLabel = d.status === 'recording' ? ICON.stop + 'STOP' : ICON.rec.replace('class="dot" ', '') + 'START REC';
+      setHTML(badge, armedNow
+        ? '<span class="b-main">' + ICON.warn + 'TAP AGAIN TO STOP</span>'
+        : '<span class="b-main">' + icon + LABEL[d.status] + '</span>' + (canAct ? '<span class="b-act">' + actLabel + '</span>' : ''));
+      badge.dataset.id = d.id;
+      badge.disabled = !canAct;
+      badge.title = !canAct ? '' : d.status === 'recording' ? 'Click to stop recording' : 'Click to start recording';
+      if (armedNow) badge.dataset.armed = '1'; else delete badge.dataset.armed;
+      const meta = [];
+      if (d.status === 'offline') meta.push(`<span>${esc(WHY[d.error] || d.error || 'no response')}</span>`);
+      else {
+        if (d.timecode) meta.push(`<span>TC ${esc(d.timecode)}</span>`);
+        if (d.format) meta.push(`<span>${esc(d.format)}</span>`);
+        meta.push(`<span>${d.status === 'recording' ? 'recording for' : 'for'} ${dur(d.statusForMs)}</span>`);
+      }
+      r.querySelector('.meta').innerHTML = meta.join('');
+      r.querySelector('.note').textContent = d.formatting ? `Formatting ${d.type === 'kipro' ? 'media' : 'slot ' + d.formatting.slot}... this can take a minute or more.` : (d.note || '');
+
+      const key = d.slots.map((s) => s.id).join(',');
+      const box = r.querySelector('.slots');
+      if (c.slotKey !== key) {
+        box.innerHTML = '';
+        c.slotNodes = d.slots.map(() => {
+          const n = el('div', 'slot', `
+            <div class="slot-top">
+              <span class="slot-left"><span class="slot-label"></span><span class="vol"></span></span>
+              <span class="slot-right"><span class="remain"></span><span class="sev"></span><span class="slot-fmt"></span></span>
+            </div>
+            <div class="gauge-row"><div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100"><i></i></div><div class="pct"></div></div>`);
+          box.appendChild(n);
+          return n;
+        });
+        c.slotKey = key;
+      }
+      d.slots.forEach((s, i) => {
+        renderSlot(c.slotNodes[i], d, s, th);
+        if (d.status !== 'offline' && ['warn', 'crit'].includes(c.slotNodes[i].dataset.sev))
+          low.push({ name: d.name, slot: s, sev: c.slotNodes[i].dataset.sev });
+      });
+
+      if (d.status === 'recording') counts.recording++;
+      else if (d.status === 'offline') counts.offline++;
+      else counts.stopped++;
+    }
+
+    const chip = (icon, n, text, extra) => `<div class="chip ${extra || ''}">${icon}<b>${n}</b> ${text}</div>`;
+    const worst = low.some((l) => l.sev === 'crit');
+    $('summary').innerHTML =
+      chip('<span style="color:var(--rec)">' + ICON.rec.replace('class="dot" ', '') + '</span>', counts.recording, 'recording') +
+      chip(ICON.stop, counts.stopped, 'not recording') +
+      chip(ICON.offline, counts.offline, 'offline') +
+      (low.length
+        ? chip(worst ? '<span style="color:var(--crit)">' + ICON.crit + '</span>' : '<span style="color:var(--warn)">' + ICON.warn + '</span>',
+            low.length, 'low drive' + (low.length > 1 ? 's' : '') + ': ' +
+            esc(low.map((l) => `${l.name} ${l.slot.label} (${Math.round(l.slot.freePercent)}%)`).join(', ')),
+            'alert ' + (worst ? 'crit' : ''))
+        : '');
+  }
+
+  function toast(lines, bad) {
+    const t = el('div', 'toast' + (bad ? ' bad' : ''));
+    t.innerHTML = lines.map((l) => '<div>' + esc(l) + '</div>').join('');
+    $('toasts').appendChild(t);
+    setTimeout(() => t.remove(), bad ? 9000 : 4500);
+  }
+  async function post(url, body) {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+    return j;
+  }
+  async function control(id, action, slot, expectVolume) {
+    busy.add(id);
+    try {
+      const j = await post('/api/control', { id, action, slot, expectVolume });
+      const d = lastData.devices.find((x) => x.id === id);
+      toast([`${d ? d.name : id}: ${j.message}`], !j.ok);
+    } catch (e) { toast([e.message], true); }
+    busy.delete(id);
+    setTimeout(tick, 700);
+  }
+  function confirmDialog(title, names, goLabel, opts = {}) {
+    return new Promise((resolve) => {
+      const dlg = $('confirm');
+      $('c-title').textContent = title;
+      $('c-body').innerHTML = (opts.note ? '<p class="danger">' + esc(opts.note) + '</p>' : '') + '<ul>' + names.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>';
+      $('c-go').textContent = goLabel;
+      // Brief lock-out so a double-click on the button that opened this can't land on the confirm button.
+      let left = opts.delaySec || 0, timer = null;
+      if (left) {
+        $('c-go').disabled = true;
+        $('c-go').textContent = `${goLabel} (${left})`;
+        timer = setInterval(() => {
+          left--;
+          if (left <= 0) { clearInterval(timer); $('c-go').disabled = false; $('c-go').textContent = goLabel; }
+          else $('c-go').textContent = `${goLabel} (${left})`;
+        }, 1000);
+      } else $('c-go').disabled = false;
+      const done = (v) => { clearInterval(timer); dlg.close(); $('c-go').onclick = $('c-cancel').onclick = dlg.onclose = null; resolve(v); };
+      $('c-go').onclick = () => done(true);
+      $('c-cancel').onclick = () => done(false);
+      dlg.onclose = () => resolve(false);
+      dlg.showModal();
+    });
+  }
+  async function controlAll(action) {
+    const want = action === 'record' ? 'stopped' : 'recording';
+    const names = lastData.devices.filter((d) => d.online && d.status === want).map((d) => d.name);
+    if (!names.length) return toast([action === 'record' ? 'Nothing to start: no idle units.' : 'Nothing to stop: no units are recording.']);
+    const ok = await confirmDialog(action === 'record' ? `Start recording on ${names.length} unit${names.length > 1 ? 's' : ''}?`
+      : `STOP recording on ${names.length} unit${names.length > 1 ? 's' : ''}?`, names, action === 'record' ? 'START ALL' : 'STOP ALL');
+    if (!ok) return;
+    try {
+      const j = await post('/api/control-all', { action });
+      const failed = j.results.filter((r) => !r.ok && !r.skipped);
+      toast(j.results.map((r) => `${r.name}: ${r.message}${r.skipped ? ' (skipped)' : ''}`), failed.length > 0);
+    } catch (e) { toast([e.message], true); }
+    setTimeout(tick, 700);
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b || b.disabled || !lastData) return;
+    const act = b.dataset.act, id = b.dataset.id;
+    if (act === 'all-record') return controlAll('record');
+    if (act === 'all-stop') return controlAll('stop');
+    if (busy.has(id)) return;
+    if (act === 'slot') return control(id, 'slot', +b.dataset.slot);
+    if (act === 'format') {
+      const d = lastData.devices.find((x) => x.id === id);
+      const slot = d && d.slots.find((x) => String(x.id) === b.dataset.slot);
+      if (!slot) return;
+      const used = slot.freePercent != null ? `${Math.round(100 - slot.freePercent)}% used` : 'usage unknown';
+      confirmDialog(`ERASE and format ${slot.label} on ${d.name}?`,
+        [`Volume: ${slot.volume || '(unnamed)'}`, used, 'Format: ' + (d.formatFs === 'HFS+' ? 'macOS (HFS+)' : d.formatFs || 'unknown')],
+        'ERASE & FORMAT', { note: 'This permanently deletes every clip on this drive. It cannot be undone.', delaySec: 2 })
+        .then((ok) => { if (ok) control(id, 'format', slot.id, slot.volume || null); });
+      return;
+    }
+    if (act === 'toggle') {
+      const d = lastData.devices.find((x) => x.id === id);
+      if (!d) return;
+      if (d.status === 'stopped') return control(id, 'record');
+      if (d.status === 'recording') {
+        // Stopping loses footage if it's an accident, so the first click only arms the button.
+        if (!ctl.confirmStop || (armed[id] && Date.now() - armed[id] < 3000)) { delete armed[id]; return control(id, 'stop'); }
+        armed[id] = Date.now();
+        render(lastData);
+        setTimeout(() => render(lastData), 3100);
+      }
+    }
+  });
+
+  let lastOk = 0;
+  async function tick() {
+    try {
+      const r = await fetch('/api/status', { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      render(await r.json());
+      lastOk = Date.now();
+      document.body.classList.remove('stale');
+      $('banner').classList.remove('show');
+      $('conn').className = 'conn';
+      $('conn').lastChild.textContent = 'live';
+    } catch {
+      if (Date.now() - lastOk > 4000) {
+        document.body.classList.add('stale');
+        $('banner').classList.add('show');
+        $('conn').className = 'conn bad';
+        $('conn').lastChild.textContent = 'server unreachable';
+      }
+    }
+  }
+  setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString(); }, 500);
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>

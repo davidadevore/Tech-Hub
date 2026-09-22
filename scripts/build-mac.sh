@@ -23,6 +23,8 @@ cp services/lux/package.json "$resources/lux/package.json"
 cp "$NODE_BINARY" "$resources/node"
 cp hub/* "$resources/hub/"
 cp package.json "$resources/package.json"
+(cd services/netgear && "$NODE_BINARY" node_modules/next/dist/bin/next build)
+"$NODE_BINARY" scripts/bundle-services.cjs "$resources"
 cp native-mac/Info.plist "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$app/Contents/Info.plist"
 /usr/bin/swiftc -module-cache-path "$project_dir/build/swift-cache" -target arm64-apple-macos13.0 native-mac/TechHub.swift -o "$app/Contents/MacOS/Tech Hub" -framework AppKit -framework Foundation

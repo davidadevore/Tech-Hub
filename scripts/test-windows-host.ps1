@@ -14,12 +14,20 @@ try {
         try {
             $runtime = Get-Content (Join-Path $testDir 'runtime.json') -Raw | ConvertFrom-Json
             $state = Invoke-RestMethod "http://127.0.0.1:$($runtime.adminPort)/api/status"
-            if (@($state.services | Where-Object state -eq running).Count -eq 3) { break }
+            if (@($state.services | Where-Object state -eq running).Count -eq 6) { break }
         } catch { }
     }
-    if (@($state.services | Where-Object state -eq running).Count -ne 3) { throw "Tray host services did not start: $($state | ConvertTo-Json -Depth 4)" }
+    if (@($state.services | Where-Object state -eq running).Count -ne 6) { throw "Tray host services did not start: $($state | ConvertTo-Json -Depth 4)" }
     $hostProcess.Refresh()
     if ($hostProcess.MainWindowHandle -ne 0) { throw 'Tray-only app unexpectedly opened a main window' }
+    Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class TechHubTrayCheck {
+ [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(string className, string title);
+}
+'@
+    if ([TechHubTrayCheck]::FindWindow('StreamlinePowerMonitorTrayWindow', $null) -ne [IntPtr]::Zero) { throw 'Power Monitor created a separate system-tray window' }
     $hubPid = $runtime.pid
     Stop-Process -Id $hostProcess.Id -Force
     $hostProcess.WaitForExit()

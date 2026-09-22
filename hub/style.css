@@ -1,4 +1,7 @@
 /* Streamline palette, shared with the Power Monitor visual identity. */
+#configuration { max-width: 800px; width: 92vw; }
+#configValue { min-width: 0 !important; resize: vertical; }
+#services .card > .textButton { display: inline-block; margin: 8px 16px 12px 0; }
 :root {
   --bg: #071015;
   --bg-deep: #040a0e;

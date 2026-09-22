@@ -80,7 +80,8 @@ sealed class HubWindow : Form
             using var state = JsonDocument.Parse(await http.GetStringAsync($"http://127.0.0.1:{actual}/api/status"));
             if (quitting) return; port = actual; master.Enabled = true;
             int count = state.RootElement.GetProperty("services").EnumerateArray().Count(s => s.GetProperty("state").GetString() == "running");
-            statusItem.Text = $"{count} of 3 services online · Master :{actual}"; tray.Text = $"Tech Hub · {count} of 3 services online";
+            int total = state.RootElement.GetProperty("services").GetArrayLength();
+            statusItem.Text = $"{count} of {total} services online · Master :{actual}"; tray.Text = $"Tech Hub · {count} of {total} services online";
         } catch { if (!quitting) { port = null; master.Enabled = false; statusItem.Text = "Starting or unavailable — open logs"; } }
         finally { refreshing = false; }
     }
