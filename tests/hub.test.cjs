@@ -15,6 +15,8 @@ test('isolates services, protects admin and APIs, persists passwords, invalidate
  for(const d of definitions){const server=http.createServer((req,res)=>{res.setHeader('content-type','application/json');res.end(JSON.stringify({service:d.id,path:req.url,origin:req.headers.origin,host:req.headers.host}));});await listen(server,c.services[d.id].backendPort);backends.push(server);}
  hub=await startHub({dir,launch:false});const admin=`http://127.0.0.1:${c.adminPort}`,dsan=`http://127.0.0.1:${c.services.dsan.port}`,lux=`http://127.0.0.1:${c.services.lux.port}`;
  assert.equal((await fetch(admin)).status,200);assert.equal(await new Promise(resolve=>http.get(admin+'/api/status',{headers:{Host:'evil.example'}},res=>{res.resume();resolve(res.statusCode);})),403);
+ assert.equal((await fetch(admin+'/api/updates').then(r=>r.json())).status,'idle');
+ assert.equal((await fetch(admin+'/api/updates/check',{method:'POST',headers:{Origin:'http://evil.example'}})).status,403);
  assert.equal((await fetch(dsan+'/api/status')).status,200);assert.equal((await fetch(dsan+'/api/status').then(r=>r.json())).service,'dsan');
  const set=async(id,password,headers={})=>fetch(admin+'/api/access',{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify({id,password})});
  assert.equal((await set('dsan','test-pass',{Origin:'http://evil.example'})).status,403);

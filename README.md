@@ -4,6 +4,8 @@ One desktop application for **D’san Ready**, **Lux Link**, **Power Monitor**, 
 
 ## Downloads
 
+Current desktop release: **0.5.0**. See the [changelog](CHANGELOG.md) for app switching, live settings, backups, diagnostics, and startup update notifications.
+
 ### Companion module
 
 **[Download the offline Companion module — v1.0.3](https://github.com/horner516/Tech-Hub/releases/download/companion-v1.0.3/streamline-techhub-1.0.3.tgz)**
@@ -91,6 +93,16 @@ The underlying servers listen only on `127.0.0.1` (default ports `18701–18706`
 
 ## Data, updates, and troubleshooting
 
+Use the dropdown at the top left of any service dashboard to switch directly to another enabled app. It keeps the current server hostname and uses each service's actual assigned port. Password-protected apps still require their own password. The master page appears in the switcher only on the Tech Hub computer; D’san's full-screen presentation view hides the shared header.
+
+The master page's **Service enabled** switches stop and start individual apps. Disabled apps retain their configuration and disappear from the dropdown; this choice is saved for the next launch. Their public gateway stays available to show an “off” page, but their monitoring/control process is stopped.
+
+**Record Monitor** and **Ultrix Panel** have an in-app **Settings** button when opened locally on the Tech Hub computer. Record Monitor provides recorder setup, polling and control options. Ultrix provides forms for router connections, levels, source/destination labels and visibility, and profiles. Both apply settings live: only affected recorder connections or changed router connection settings reconnect. Saving never sends recording start/stop commands. Record Monitor uses red accents and Ultrix uses blue accents. These settings forms and the master configuration editor warn before discarding edits and reject saves from a window whose configuration has changed elsewhere.
+
+The master page's **Backup & troubleshooting** section exports password-encrypted configuration backups and restores them on the Tech Hub computer. Keep the export passphrase: it cannot be recovered. Automatic local snapshots retain the last ten distinct saved configurations; they contain credentials and are restricted to the local account. Backups cover the hub configuration and the six services' saved configuration files, not logs or browser-local layouts. Restoring stops services; quit and reopen Tech Hub to load the restored configuration.
+
+**Troubleshooting** reports service health, data freshness and recent service errors. Its downloadable diagnostic report excludes device names, addresses, credentials and raw logs. Record Monitor marks data stale even when a status request stalls, and prevents overlapping browser polls. Service recovery and sign-in pages retain the app switcher.
+
 Settings live in `~/Library/Application Support/Tech Hub/` on Mac and `%LOCALAPPDATA%\Streamline\Tech Hub\` on Windows:
 
 - `config.json`: public ports, internal ports, bind host, and service password hashes.
@@ -99,7 +111,9 @@ Settings live in `~/Library/Application Support/Tech Hub/` on Mac and `%LOCALAPP
 
 Use the TH menu to open configuration or logs. To change ports, quit Tech Hub, edit `config.json`, and reopen it. All seven ports must be unique integers between 1024 and 65535. Set `host` to `127.0.0.1` for local-only service access or `0.0.0.0` for LAN access.
 
-Use **Downloads & Updates** in the TH menu to download a new complete Tech Hub app. Quit Tech Hub before replacing it. Saved configuration survives updates. The original standalone apps and their saved settings are left separate; Tech Hub does not automatically import them. Stop a standalone Lux Link instance when using Tech Hub to avoid competing for lighting protocol UDP ports (sACN 5568 and Art-Net 6454).
+Tech Hub checks GitHub for a newer desktop release at startup without delaying the services. When an update is available, the Mac app shows a notice and Windows shows a tray notification. Open **Check for Updates** in the TH menu or the **Tech Hub updates** section of the master page to see the installed and available versions and release notes for every newer version. Checks require internet access; offline operation of the services is unaffected. Companion-only releases and previews are excluded. Updates are downloaded and installed manually.
+
+Quit Tech Hub before replacing it. Saved configuration survives updates. The original standalone apps and their saved settings are left separate; Tech Hub does not automatically import them. Stop a standalone Lux Link instance when using Tech Hub to avoid competing for lighting protocol UDP ports (sACN 5568 and Art-Net 6454).
 
 Tech Hub runs while its menu-bar or system-tray app is open. It does not install a system daemon or enable login startup. Quitting the app stops its child services. Startup failures appear in the master page and logs. Network status indicates that a web service is running, not that physical show devices have been validated.
 

@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.js';
 import { createMockRouter } from './mock-router.js';
 import { createPanelServer } from './server.js';
-import { Swp08Client } from './swp08/client.js';
+import { ManagedRouter } from './managed-router.js';
+import validation from './validate-config.cjs';
+import { isDeepStrictEqual } from 'node:util';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -21,6 +23,7 @@ function loadReplay(file) {
 }
 
 let config = loadConfig(configPath);
+if(process.env.TECH_HUB_MANAGED==='1')validation.validateUltrix(config);
 const log = (level, msg) => console.log(`${new Date().toISOString().slice(11, 19)} ${level.padEnd(5)} ${msg}`);
 const levelCount = () => (config.levels ?? [{}]).length;
 
@@ -34,31 +37,21 @@ if (config.mock?.enabled) {
 
 // Routing is on unless config.router.allowRouting is explicitly false (a read-only connection).
 const allowRouting = config.router.allowRouting !== false;
-const router = new Swp08Client({ ...config.router, allowRouting, levels: levelCount(), destinations: config.destinations?.count ?? 0 });
+const router = new ManagedRouter();
 log('info', allowRouting ? 'routing enabled' : 'routing DISABLED (router.allowRouting is false): read-only, nothing will be sent to change a route');
 router.on('log', log);
 router.on('status', (s) => log('info', `router ${s}`));
-if (config.router.host) router.start();
-else log('info', 'Set the router host in Tech Hub service settings to connect.');
+router.configure(config);
+if (!config.router.host) log('info', 'Set the router host in Tech Hub service settings to connect.');
 
-const panel = createPanelServer({ getConfig: () => config, router, publicDir: path.join(root, 'public') });
+function reloadConfig(){const next=loadConfig(configPath);validation.validateUltrix(next);const accessChanged=!isDeepStrictEqual(config.profiles,next.profiles)||config.readOnly!==next.readOnly;router.configure(next);config=next;panel.invalidate({accessChanged});log('info','settings applied live');}
+const panel = createPanelServer({ getConfig: () => config, router, publicDir: path.join(root, 'public'), reloadConfig });
 const port = await panel.listen(Number(process.env.TECH_HUB_BACKEND_PORT || config.server?.port || 8080), process.env.TECH_HUB_BACKEND_HOST || config.server?.host || '0.0.0.0');
 log('info', `panel on http://localhost:${port}`);
 
-// Reload visibility/categories/profiles when the config file is saved. Router and level settings need a restart.
+// Watch the directory: atomic configuration saves replace the file inode. Managed saves use the authenticated reload endpoint.
 let reloadTimer;
-watch(configPath, () => {
-  clearTimeout(reloadTimer);
-  reloadTimer = setTimeout(() => {
-    try {
-      config = loadConfig(configPath);
-      panel.invalidate();
-      log('info', 'config reloaded');
-    } catch (err) {
-      log('error', `config reload failed, keeping previous config: ${err.message}`);
-    }
-  }, 200);
-});
+if(process.env.TECH_HUB_MANAGED!=='1')watch(path.dirname(configPath),(_,name)=>{if(String(name)!==path.basename(configPath))return;clearTimeout(reloadTimer);reloadTimer=setTimeout(()=>{try{reloadConfig();}catch(err){log('error','config reload failed: '+err.message);}},200);});
 
 for (const sig of ['SIGINT', 'SIGTERM']) {
   process.on(sig, async () => {

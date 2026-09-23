@@ -7,6 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var polling: Timer?
     private var port = 8700
     private var quitting = false
+    private var availableUpdate: String?
+    private var updatePrompted = false
     private let support = ProcessInfo.processInfo.environment["TECH_HUB_DATA_DIR"].map { URL(fileURLWithPath: $0) } ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Tech Hub")
     func applicationDidFinishLaunching(_ notification: Notification) {
         if NSRunningApplication.runningApplications(withBundleIdentifier: "show.stg.techhub").count > 1 { NSApp.terminate(nil); return }
@@ -41,7 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         let label = NSMenuItem(title: status, action:nil,keyEquivalent:""); label.isEnabled=false; menu.addItem(label)
         menu.addItem(.separator())
-        for (title, action) in [("Open Master Page", #selector(openMaster)),("Open Configuration Folder",#selector(openConfig)),("Open Logs",#selector(openLogs)),("Downloads & Updates",#selector(openUpdates))] {
+        for (title, action) in [("Open Master Page", #selector(openMaster)),("Open Configuration Folder",#selector(openConfig)),("Open Logs",#selector(openLogs)),(availableUpdate.map { "Update available: v\($0) — What's changed" } ?? "Check for Updates",#selector(openUpdates))] {
             let row = NSMenuItem(title:title,action:action,keyEquivalent:""); row.target=self;menu.addItem(row)
         }
         menu.addItem(.separator())
@@ -66,11 +68,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let count = services?.filter { $0["state"] as? String == "running" }.count
             DispatchQueue.main.async { if !self.quitting { self.rebuild(count.map { "\($0) of \(services?.count ?? 0) services online · :\(self.port)" } ?? "Starting or unavailable — open logs") } }
         }.resume()
+        var updateRequest = URLRequest(url:URL(string:"http://127.0.0.1:\(port)/api/updates")!); updateRequest.timeoutInterval=2
+        URLSession.shared.dataTask(with:updateRequest) { [weak self] data, _, _ in
+            guard let self, let data, let state = try? JSONSerialization.jsonObject(with:data) as? [String:Any], state["available"] as? Bool == true, let latest = state["latestVersion"] as? String else { return }
+            DispatchQueue.main.async {
+                guard !self.quitting else { return }
+                self.availableUpdate = latest
+                if !self.updatePrompted {
+                    self.updatePrompted = true
+                    let alert = NSAlert(); alert.messageText = "Tech Hub v\(latest) is available"
+                    alert.informativeText = "Installed version: \(state["currentVersion"] as? String ?? "unknown"). Review what changed in each newer release on the master page."
+                    alert.addButton(withTitle:"View Changes"); alert.addButton(withTitle:"Later")
+                    if alert.runModal() == .alertFirstButtonReturn { self.openUpdatePage() }
+                }
+            }
+        }.resume()
     }
     @objc private func openMaster() { guard let port = currentMasterPort() else { rebuild("Starting or unavailable — open logs"); return }; NSWorkspace.shared.open(URL(string:"http://127.0.0.1:\(port)")!) }
     @objc private func openConfig() { NSWorkspace.shared.open(support) }
     @objc private func openLogs() { NSWorkspace.shared.open(support.appendingPathComponent("logs")) }
-    @objc private func openUpdates() { NSWorkspace.shared.open(URL(string:"https://github.com/horner516/Tech-Hub/releases/latest")!) }
+    private func openUpdatePage() { guard let port = currentMasterPort() else { return }; NSWorkspace.shared.open(URL(string:"http://127.0.0.1:\(port)/#updates")!) }
+    @objc private func openUpdates() {
+        guard let port = currentMasterPort() else { return }
+        var request = URLRequest(url:URL(string:"http://127.0.0.1:\(port)/api/updates/check")!);request.httpMethod="POST";request.timeoutInterval=2
+        URLSession.shared.dataTask(with:request).resume();openUpdatePage()
+    }
     @objc private func quit() { NSApp.terminate(nil) }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         quitting=true;polling?.invalidate()

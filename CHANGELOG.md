@@ -1,6 +1,21 @@
 # Changelog
 
-## Next build
+## 0.5.0 — 2026-09-23
+
+- Added encrypted configuration export/restore, ten automatic local snapshots, and a troubleshooting report that excludes credentials and raw logs.
+- Added unsaved-edit warnings and conflicting-save detection to Record Monitor/Ultrix settings and the master configuration editor.
+- Replaced Ultrix's in-app JSON editor with validated forms for levels, labels, visibility and profiles. Settings now apply live, reconnecting the router only when necessary.
+- Kept app switching available on service recovery and sign-in pages, and fixed Record Monitor stale detection during stalled requests and overlapping polling.
+
+- Record Monitor now applies configuration live, retaining unchanged recorder connections and status. Its settings button is “Save settings”; active recorder commands or formatting must finish before applying changes.
+
+- Added a mobile-friendly app switcher to each service dashboard, using the current computer's assigned ports and retaining service password gates. Full-screen D’san presentation mode stays uncluttered.
+- Added persistent service on/off controls to the master page. Disabled services stop, retain their settings, and disappear from the app switcher.
+- Added in-app settings for Record Monitor and Ultrix, restricted to the Tech Hub computer. Record Monitor uses red accents; Ultrix uses blue accents in the shared dark style.
+
+- Check for desktop updates on startup without delaying service startup. Show installed/latest versions and the release notes for every skipped version on the master page, with Mac/Windows tray access and a startup update notice.
+
+- Simplified the master-page header to “Tech Hub” and linked its TH favicon directly.
 
 - Added the TH application icon to macOS, Windows, and the Windows installer and system tray.
 - Added service-specific browser icons for every dashboard and password screen, plus the TH icon on the master page.

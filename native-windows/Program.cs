@@ -25,6 +25,8 @@ sealed class HubWindow : Form
     readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(2) };
     readonly ToolStripMenuItem master = new("Open Control Page") { Enabled = false };
     readonly ToolStripMenuItem statusItem = new("Starting services…") { Enabled = false };
+    readonly ToolStripMenuItem updatesItem = new("Check for Updates");
+    bool updateNotified;
     Process? hub;
     Job? job;
     StreamWriter? log;
@@ -38,7 +40,13 @@ sealed class HubWindow : Form
         var menu = new ContextMenuStrip(); menu.Items.Add(statusItem); menu.Items.Add(new ToolStripSeparator());
         master.Click += (_, _) => { if (port is int p) Open($"http://127.0.0.1:{p}"); };
         menu.Items.Add(master);
-        menu.Items.Add("Check for Updates", null, (_, _) => Open("https://github.com/horner516/Tech-Hub/releases/latest"));
+        updatesItem.Click += async (_, _) => {
+            if (port is not int p) return;
+            try { using var response = await http.PostAsync($"http://127.0.0.1:{p}/api/updates/check", null); } catch { }
+            Open($"http://127.0.0.1:{p}/#updates");
+        };
+        menu.Items.Add(updatesItem);
+        tray.BalloonTipClicked += (_, _) => { if (port is int p) Open($"http://127.0.0.1:{p}/#updates"); };
         menu.Items.Add("Open Logs", null, (_, _) => Open(Path.Combine(data, "logs")));
         menu.Items.Add(new ToolStripSeparator()); menu.Items.Add("Quit Tech Hub", null, async (_, _) => await Quit());
         using var iconStream = typeof(HubWindow).Assembly.GetManifestResourceStream("TechHub.ico")!;
@@ -81,6 +89,17 @@ sealed class HubWindow : Form
             int count = state.RootElement.GetProperty("services").EnumerateArray().Count(s => s.GetProperty("state").GetString() == "running");
             int total = state.RootElement.GetProperty("services").GetArrayLength();
             statusItem.Text = $"{count} of {total} services online · Master :{actual}"; tray.Text = $"Tech Hub · {count} of {total} services online";
+            try {
+                using var updates = JsonDocument.Parse(await http.GetStringAsync($"http://127.0.0.1:{actual}/api/updates"));
+                if (!quitting && updates.RootElement.GetProperty("available").GetBoolean()) {
+                    string latest = updates.RootElement.GetProperty("latestVersion").GetString()!;
+                    updatesItem.Text = $"Update available: v{latest} — What's changed";
+                    if (!updateNotified) {
+                        updateNotified = true;
+                        tray.ShowBalloonTip(10000, $"Tech Hub v{latest} is available", "Click to review what changed since your installed version.", ToolTipIcon.Info);
+                    }
+                }
+            } catch { /* Update lookup must not change service health. */ }
         } catch { if (!quitting) { port = null; master.Enabled = false; statusItem.Text = "Starting or unavailable — open logs"; } }
         finally { refreshing = false; }
     }
