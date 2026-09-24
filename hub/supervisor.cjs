@@ -1,6 +1,6 @@
 'use strict';
 // One owner per child; retries never overlap a process that is still shutting down.
-function supervise({start, check, report, interval=5000, startupTimeout=30000, retryDelay=1000, maxRetries=3}) {
+function supervise({start, check, report, autoStart=true, interval=5000, startupTimeout=30000, retryDelay=1000, maxRetries=3}) {
  let child, timer, stopped=false, generation=0, retries=0, failures=0, started=0, running=false, operation=Promise.resolve();
  const schedule=(fn,ms)=>{clearTimeout(timer);timer=setTimeout(fn,ms);timer.unref?.();};
  async function terminate() {
@@ -37,8 +37,9 @@ function supervise({start, check, report, interval=5000, startupTimeout=30000, r
   child.once('exit',(code,signal)=>{operation=fail(`Service stopped (${signal||code}).`,token);});
   schedule(()=>probe(token),Math.min(500,interval));
  }
- launch();
+ if(autoStart)launch();else stopped=true;
  return {
+  start(){if(stopped){stopped=false;retries=0;launch();}},
   async restart(){++generation;clearTimeout(timer);await operation;clearTimeout(timer);await terminate();if(!stopped){retries=0;launch();}},
   async stop(){stopped=true;++generation;clearTimeout(timer);await operation;await terminate();}
  };

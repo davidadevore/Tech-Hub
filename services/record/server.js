@@ -43,10 +43,11 @@ class ControlError extends Error {
 }
 // Sleep that a controller can cut short so the UI reflects a command within ~a second.
 function makeWaiter(ms) {
-  let wake = null;
+  let wake = null, stopped = false;
   return {
-    wait: () => new Promise((r) => { const t = setTimeout(r, ms); wake = () => { clearTimeout(t); r(); }; }),
+    wait: () => stopped ? Promise.resolve() : new Promise((r) => { const t = setTimeout(r, typeof ms === 'function' ? ms() : ms); wake = () => { clearTimeout(t); r(); }; }),
     nudge: () => setTimeout(() => wake && wake(), 300),
+    cancel: () => { stopped = true; wake?.(); },
   };
 }
 
@@ -105,6 +106,8 @@ function markOffline(st, why) {
 // line ("200 ok") or "NNN title:" + "key: value" lines + blank line. 5xx codes are async
 // notifications; everything <500 answers our commands in order.
 function startHyperDeck(cfg, st, opts) {
+  let disposed = false, reconnect;
+  const abort = new AbortController();
   const port = cfg.port || 9993;
   const restPort = cfg.restPort || 80;
   const nSlots = cfg.slots || 2;
@@ -141,6 +144,7 @@ function startHyperDeck(cfg, st, opts) {
   }
 
   function send(cmd, timeoutMs = 3000) {
+    if(disposed)return Promise.reject(new Error('Monitor disconnected'));
     return new Promise((res, rej) => {
       const t = setTimeout(() => rej(new Error('command timeout')), timeoutMs);
       pending.push({ res: (b) => { clearTimeout(t); res(b); }, rej: (e) => { clearTimeout(t); rej(e); } });
@@ -149,6 +153,7 @@ function startHyperDeck(cfg, st, opts) {
   }
 
   function connect() {
+    if(disposed)return;
     buf = ''; pending = [];
     sock = net.createConnection({ host: cfg.host, port });
     sock.setEncoding('utf8');
@@ -161,7 +166,7 @@ function startHyperDeck(cfg, st, opts) {
       connected = false;
       pending.forEach((p) => p.rej(new Error('closed')));
       markOffline(st);
-      setTimeout(connect, 3000);
+      if(!disposed)reconnect=setTimeout(connect, 3000);
     });
   }
 
@@ -170,7 +175,7 @@ function startHyperDeck(cfg, st, opts) {
     restBusy = true;
     try {
       const r = await fetch(`http://${cfg.host}:${restPort}/control/api/v1/media/workingset`,
-        { signal: AbortSignal.timeout(2500) });
+        { signal: AbortSignal.any([abort.signal,AbortSignal.timeout(2500)]) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
       restEntries = Array.isArray(j.workingset) ? j.workingset : [];
@@ -245,14 +250,14 @@ function startHyperDeck(cfg, st, opts) {
     st.online = true; st.error = null; st.lastSeen = Date.now();
   }
 
-  const waiter = makeWaiter(opts.pollIntervalMs);
+  const waiter = makeWaiter(()=>opts.pollIntervalMs);
   connect();
   (async () => {
-    for (;;) {
+    while (!disposed) {
       if (connected && !isFormatting(st)) {
         try { await poll(); } catch (e) { st.error = e.message; sock.destroy(); }
       }
-      await waiter.wait();
+      if(!disposed)await waiter.wait();
     }
   })();
 
@@ -264,6 +269,8 @@ function startHyperDeck(cfg, st, opts) {
   }
   // Controller: every method is a no-op with an explanation when the command doesn't apply.
   return {
+    dispose(){disposed=true;clearTimeout(reconnect);abort.abort();waiter.cancel();sock?.destroy();},
+    refreshSettings(){st.name=cfg.name;st.formatFs=fsOf(cfg);waiter.nudge();},
     async record() {
       if (st.status === 'recording') return 'already recording';
       if (st.status === 'playing') throw new ControlError('deck is in playback; stop playback first', 409);
@@ -323,6 +330,8 @@ function startHyperDeck(cfg, st, opts) {
 // AJA documents transport commands but not media-space params, so media params are configured
 // per unit (find them with probe.js).
 function startKiPro(cfg, st, opts) {
+  let disposed=false;
+  const abort=new AbortController();
   const port = cfg.port || 80;
   const paramId = (cfg.params && cfg.params.transport) || 'eParamID_TransportState';
   const media = cfg.media || [];
@@ -330,7 +339,7 @@ function startKiPro(cfg, st, opts) {
 
   async function get(id) {
     const r = await fetch(`http://${cfg.host}:${port}/config?action=get&paramid=${encodeURIComponent(id)}`,
-      { signal: AbortSignal.timeout(2500) });
+      { signal: AbortSignal.any([abort.signal,AbortSignal.timeout(2500)]) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return JSON.parse(await r.text());
   }
@@ -370,30 +379,33 @@ function startKiPro(cfg, st, opts) {
     st.online = true; st.error = null; st.lastSeen = Date.now(); fails = 0;
   }
 
-  const waiter = makeWaiter(opts.pollIntervalMs);
+  const waiter = makeWaiter(()=>opts.pollIntervalMs);
   (async () => {
-    for (;;) {
+    while (!disposed) {
       try { await poll(); } catch (e) {
         if (++fails >= 2 && !isFormatting(st)) markOffline(st, e.name === 'TimeoutError' ? 'timeout' : (e.cause && e.cause.code) || e.message);
       }
-      await waiter.wait();
+      if(!disposed)await waiter.wait();
     }
   })();
 
   // AJA TransportCommand values (from AJA's REST docs): 3 = Record, 4 = Stop.
   const cmdParam = (cfg.params && cfg.params.transportCommand) || 'eParamID_TransportCommand';
   async function setParam(param, value) {
+    if(disposed)throw new ControlError('Monitor disconnected',503);
     if (!st.online) throw new ControlError('not connected', 503);
     let r;
     try {
       r = await fetch(`http://${cfg.host}:${port}/config?action=set&paramid=${param}&value=${value}`,
-        { signal: AbortSignal.timeout(3000) });
+        { signal: AbortSignal.any([abort.signal,AbortSignal.timeout(3000)]) });
     } catch (e) { throw new ControlError('no response from unit', 504); }
     if (!r.ok) throw new ControlError('unit refused: HTTP ' + r.status, 502);
     waiter.nudge();
   }
   const command = (value) => setParam(cmdParam, value);
   return {
+    dispose(){disposed=true;abort.abort();waiter.cancel();},
+    refreshSettings(){st.name=cfg.name;st.formatFs=fsOf(cfg);waiter.nudge();},
     async record() {
       if (st.status === 'recording') return 'already recording';
       if (st.status !== 'stopped') throw new ControlError(`unit is ${st.status}; not starting record`, 409);
@@ -426,21 +438,32 @@ function startKiPro(cfg, st, opts) {
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.json': 'application/json' };
 
-function start(configPath) {
-  const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  const opts = {
-    pollIntervalMs: cfg.pollIntervalMs || 2000,
-    warnFreePercent: cfg.warnFreePercent ?? 20,
-    criticalFreePercent: cfg.criticalFreePercent ?? 10,
-    allowFormat: cfg.allowFormat !== false,
-  };
-  const ctls = new Map();
-  const states = (cfg.devices || []).map((d, i) => {
-    const dev = { id: `dev${i + 1}`, formatFilesystem: cfg.formatFilesystem, ...d };
-    const st = newState(dev);
-    ctls.set(st.id, (dev.type === 'kipro' ? startKiPro : startHyperDeck)(dev, st, opts));
-    return st;
-  });
+function start(configPath, {controllerFactory}={}) {
+  let cfg={},states=[],entries=new Map(),nextId=1,busy=0;
+  const opts={},ctls=new Map();
+  const factory=controllerFactory||((dev,st,options)=>(dev.type==='kipro'?startKiPro:startHyperDeck)(dev,st,options));
+  const identity=d=>JSON.stringify([d.type,d.host,d.port||(d.type==='kipro'?80:9993)]);
+  const connection=d=>{const {name,...rest}=d;return rest;};
+  function applyConfig(next){
+    if(busy||states.some(isFormatting))throw new ControlError('Wait for the current recorder command or format operation to finish before saving.',409);
+    if(!next||!Array.isArray(next.devices)||next.devices.some(d=>!d||!['hyperdeck','kipro'].includes(d.type)||typeof d.host!=='string'||!d.host.trim()))throw new ControlError('Invalid recorder configuration',400);
+    const ids=new Set(),used=new Set(),reserved=new Set(next.devices.filter(d=>d.id).map(d=>d.id));
+    const plan=next.devices.map(d=>{
+      const previous=d.id?entries.get(d.id):[...entries.values()].find(e=>!used.has(e.dev.id)&&identity(e.dev)===identity(d)&&!reserved.has(e.dev.id));
+      let id=d.id||previous?.dev.id;
+      if(!id){do{id=`dev${nextId++}`;}while(entries.has(id)||ids.has(id)||reserved.has(id));}
+      if(typeof id!=='string'||ids.has(id))throw new ControlError('Recorder IDs must be unique strings',400);
+      ids.add(id);if(previous)used.add(previous.dev.id);
+      const dev={formatFilesystem:next.formatFilesystem,...d,id};
+      return {dev,previous,reuse:previous&&require('node:util').isDeepStrictEqual(connection(dev),connection(previous.dev))};
+    });
+    Object.assign(opts,{pollIntervalMs:next.pollIntervalMs||2000,warnFreePercent:next.warnFreePercent??20,criticalFreePercent:next.criticalFreePercent??10,allowFormat:next.allowFormat!==false});
+    for(const e of entries.values())if(!plan.some(p=>p.reuse&&p.previous===e))e.ctl.dispose();
+    const replacement=new Map();ctls.clear();states=[];
+    for(const p of plan){let e=p.previous;if(p.reuse){Object.assign(e.dev,p.dev);e.ctl.refreshSettings();}else{const st=newState(p.dev);e={dev:p.dev,st,ctl:factory(p.dev,st,opts)};}replacement.set(e.dev.id,e);ctls.set(e.dev.id,e.ctl);states.push(e.st);}
+    entries=replacement;cfg=next;
+  }
+  applyConfig(JSON.parse(fs.readFileSync(configPath,'utf8')));
 
   const isLoopback = (req) => process.env.TECH_HUB_MANAGED === '1' ? req.headers['x-techhub-local-client'] === '1' : ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
   const canControl = (req) => cfg.controlEnabled !== false && (!cfg.controlLocalOnly || isLoopback(req));
@@ -463,6 +486,7 @@ function start(configPath) {
     if (o) { let host; try { host = new URL(o).host; } catch { host = null; } if (host !== req.headers.host) throw new ControlError('cross-origin request refused', 403); }
   }
   async function run(st, action, slot, who, expectVolume) {
+    busy++;
     const ctl = ctls.get(st.id);
     let msg;
     try {
@@ -476,7 +500,7 @@ function start(configPath) {
     } catch (e) {
       console.log(`[control] ${new Date().toLocaleTimeString()} ${who} -> ${st.name}: ${action}${action === 'format' ? ' slot ' + slot : ''} FAILED: ${e.message}`);
       return { id: st.id, name: st.name, ok: false, message: e.message };
-    }
+    } finally { busy--; }
   }
   async function handleControl(req, res, url) {
     const send = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(obj)); };
@@ -501,10 +525,18 @@ function start(configPath) {
       return send(e.status || 500, { error: e.message });
     }
   }
-  setInterval(saveBaselines, 10000).unref();
+  const baselineTimer=setInterval(saveBaselines, 10000);baselineTimer.unref();
 
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://x');
+    if(url.pathname==='/api/reload-config'){
+      try{
+        if(process.env.TECH_HUB_MANAGED!=='1'||!isLoopback(req)||!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))throw new ControlError('Local Tech Hub access required',403);
+        if(req.method!=='POST'||!/^application\/json/i.test(req.headers['content-type']||'')||(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`))throw new ControlError('Local JSON POST required',403);
+        applyConfig(JSON.parse(fs.readFileSync(configPath,'utf8')));
+        res.writeHead(200,{'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true}));
+      }catch(e){res.writeHead(e.status||400,{'Content-Type':'application/json'});return res.end(JSON.stringify({error:e.message}));}
+    }
     if (url.pathname === '/api/control' || url.pathname === '/api/control-all') return handleControl(req, res, url);
     if (url.pathname === '/api/status') {
       const now = Date.now();
@@ -543,6 +575,7 @@ function start(configPath) {
     for (const list of Object.values(os.networkInterfaces()))
       for (const a of list || []) if (a.family === 'IPv4' && !a.internal) console.log(`  Network:  http://${a.address}:${port}`);
   });
+  server.on('close',()=>{clearInterval(baselineTimer);for(const e of entries.values())e.ctl.dispose();});
   return server;
 }
 

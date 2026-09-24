@@ -29,3 +29,7 @@ test('startup timeout and spawn errors exhaust recovery without hanging shutdown
  await until(()=>state?.state==='error');assert.equal(starts,2);await service.stop();
  const f=fixture({check:async()=>false,maxRetries:0});await until(()=>f.states.at(-1)?.state==='error');await f.service.stop();
 });
+test('disabled services start only when enabled, stop without recovery, and can resume',async()=>{
+ const f=fixture({autoStart:false});
+ try{await delay(20);assert.equal(f.children.length,0);f.service.start();await until(()=>f.states.at(-1)?.state==='running');await f.service.stop();await delay(25);assert.equal(f.children.length,1);f.service.start();await until(()=>f.children.length===2&&f.states.at(-1)?.state==='running');assert.equal(f.maxAlive,1);}finally{await f.service.stop();}
+});

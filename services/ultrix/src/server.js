@@ -23,7 +23,7 @@ const sha = (s) => createHash('sha256').update(String(s)).digest();
  * Access control model: a profile may carry a `pin`; the browser logs in once per profile and gets
  * an HttpOnly session cookie. Profiles without a pin are open to anyone who can reach the port.
  */
-export function createPanelServer({ getConfig, router, publicDir }) {
+export function createPanelServer({ getConfig, router, publicDir, reloadConfig }) {
   const sessions = new Map(); // sid -> Set<profile>
   const clients = new Set(); // { res, profile }
   const views = new Map();
@@ -39,6 +39,7 @@ export function createPanelServer({ getConfig, router, publicDir }) {
   // right after (faster than any real button click) is a no-op rather than toggling further back.
   const previousRoutes = new Map(); // dest -> Map<level, src>
   const routeBursts = new Map(); // dest -> { startedAt, touchedLevels: Set<level> }
+  let activeCommands=0;
 
   const cfg = () => getConfig();
   const viewFor = (profile) => {
@@ -149,6 +150,17 @@ export function createPanelServer({ getConfig, router, publicDir }) {
   // ---- routes -----------------------------------------------------------------------------
 
   async function api(req, res, url) {
+    if(url.pathname==='/api/health'&&req.method==='GET'){
+      if(process.env.TECH_HUB_MANAGED==='1'&&req.headers['x-techhub-local-client']==='1'&&['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(res,200,{status:router.status,lastRx:router.lastRx});
+      return json(res,403,{error:'Local Tech Hub access required'});
+    }
+    if(url.pathname==='/api/reload-config'){
+      if(!reloadConfig||process.env.TECH_HUB_MANAGED!=='1'||req.headers['x-techhub-local-client']!=='1'||!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(res,403,{error:'Local Tech Hub access required'});
+      if(req.method!=='POST'||(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`))return json(res,403,{error:'Local POST required'});
+      await readJson(req);
+      if(activeCommands)return json(res,409,{error:'Wait for the current router operation to finish.'});
+      try{reloadConfig();return json(res,200,{ok:true});}catch(error){return json(res,400,{error:error.message});}
+    }
     const profile = url.searchParams.get('profile') ?? defaultProfile(cfg());
 
     if (req.method === 'GET' && url.pathname === '/api/profiles') {
@@ -187,7 +199,7 @@ export function createPanelServer({ getConfig, router, publicDir }) {
       const wait = REFRESH_COOLDOWN_MS - (Date.now() - lastRefreshAt);
       if (wait > 0) return json(res, 429, { error: 'Names were only just refreshed. Try again in a few seconds.', retryAfterMs: wait });
       lastRefreshAt = Date.now();
-      const { changed, loadedAt } = await router.refreshNames();
+      activeCommands++;let changed,loadedAt;try{({changed,loadedAt}=await router.refreshNames());}finally{activeCommands--;}
       return json(res, 200, { ok: true, changed, loadedAt });
     }
 
@@ -233,7 +245,7 @@ export function createPanelServer({ getConfig, router, publicDir }) {
       if (view.lockedDests.has(dest)) return json(res, 403, { error: 'destination is protected' });
       if (!view.sourceSet.has(src)) return json(res, 403, { error: 'source not available' });
       if (!levels.every((l) => view.levelSet.has(l))) return json(res, 403, { error: 'level not available' });
-      const result = await router.route({ dest, src, levels: [...new Set(levels)] });
+      activeCommands++;let result;try{result=await router.route({ dest, src, levels: [...new Set(levels)] });}finally{activeCommands--;}
       return json(res, 200, result);
     }
 
@@ -268,8 +280,9 @@ export function createPanelServer({ getConfig, router, publicDir }) {
   return {
     server,
     /** Call after the config file changes so open browsers refetch it. */
-    invalidate() {
+    invalidate({accessChanged=false}={}) {
       views.clear();
+      if(accessChanged){sessions.clear();for(const client of clients)client.res.end();clients.clear();return;}
       for (const client of clients) sse(client, 'config', {});
     },
     listen: (port, host) => new Promise((resolve, reject) => {
