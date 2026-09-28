@@ -7,6 +7,7 @@ const crypto = require('node:crypto');
 const {spawn} = require('node:child_process');
 const {supervise} = require('./supervisor.cjs');
 const serviceConfig = require('./service-config.cjs');
+const hyperdeckDiscovery = require('./hyperdeck-discovery.cjs');
 const backups=require('./backups.cjs');
 const revision=value=>'"'+crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex')+'"';
 const {promisify} = require('node:util');
@@ -64,6 +65,21 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   const local=req=>['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)&&['localhost','127.0.0.1','[::1]'].includes(new URL('http://'+req.headers.host).hostname);
   const chrome=require('./service-chrome.cjs');
   const navigation=(req,id)=>({current:id,adminPort:config.adminPort,local:local(req),settings:local(req)&&['record','ultrix'].includes(id),services:services.filter(s=>config.services[s.id].enabled).map(s=>({id:s.id,name:s.name,port:s.port,protected:!!config.services[s.id].password,state:states.get(s.id)?.state}))});
+  let discovering=false;
+  async function discoverHyperDecks(req,res){
+    if(!local(req)||!sameOrigin(req))return send(res,403,{error:'Discovery is available only on the Tech Hub computer.'});
+    if(req.method==='GET')return send(res,200,{suggestions:hyperdeckDiscovery.suggestions()});
+    if(req.method!=='POST'||!/^application\/json/.test(req.headers['content-type']||''))return send(res,405,{error:'Use the settings dialog to scan.'});
+    if(discovering)return send(res,409,{error:'A scan is already running.'});
+    discovering=true;
+    try{
+      const {target}=JSON.parse(await readBody(req));
+      // Older HyperDecks accept one control connection; probing a monitored deck could drop its monitoring.
+      const skip=serviceConfig.read(dir,'record').devices.filter(x=>x.type==='hyperdeck'&&(x.port??9993)===9993).map(x=>x.host.trim());
+      return send(res,200,await hyperdeckDiscovery.scan(target,{skip}));
+    }catch(error){return send(res,400,{error:error.message});}
+    finally{discovering=false;}
+  }
   async function configure(req,res,id){
     if(!local(req)||!sameOrigin(req))return send(res,403,{error:'Settings are available only on the Tech Hub computer.'});
     if(req.method==='GET'){const value=serviceConfig.read(dir,id);res.setHeader('ETag',revision(value));return send(res,200,value);}
@@ -219,6 +235,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         if(!authed) return send(res,401,req.url.startsWith('/api/')?{error:'Service password required'}:loginPage(d.name),req.url.startsWith('/api/')?'application/json':'text/html');
         if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,navigation(req,d.id));
         if(req.url==='/__hub/settings'&&['record','ultrix'].includes(d.id))return await configure(req,res,d.id);
+        if(req.url==='/__hub/discover-hyperdecks'&&d.id==='record')return await discoverHyperDecks(req,res);
         if(!config.services[d.id].enabled)return send(res,503,chrome.disabled(d.name),'text/html');
         if(states.get(d.id).state!=='running')return send(res,503,req.url.startsWith('/api/')?{error:'Service reconnecting'}:chrome.disabled(d.name,'Reconnecting. You can choose another app above.','reconnecting'),req.url.startsWith('/api/')?'application/json':'text/html');
         if(req.url.startsWith('/api/update')&&d.id==='power')return send(res,200,{current_version:require('../package.json').version,available:false,error:'Power Monitor is bundled with Tech Hub. Update the complete app from the Tech Hub release page.'});
