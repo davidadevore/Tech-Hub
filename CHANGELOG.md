@@ -1,5 +1,9 @@
 # Changelog
 
+## Next build
+
+- Replaced service checkboxes with slider switches labeled “Service enabled” and “Service disabled,” with keyboard focus and reduced-motion support.
+
 ## 0.5.0 — 2026-09-23
 
 - Added encrypted configuration export/restore, ten automatic local snapshots, and a troubleshooting report that excludes credentials and raw logs.
