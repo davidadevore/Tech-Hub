@@ -3,7 +3,23 @@ const message=document.querySelector('#message');
 const source=document.querySelector('#sourceAddress');
 const bind=document.querySelector('#bindAddress');
 const rescan=document.querySelector('#rescan');
+const securityLevel=document.querySelector('#securityLevel');
+const authField=document.querySelector('#authField');
+const privField=document.querySelector('#privField');
+const levelBadge=document.querySelector('#levelBadge');
+const levelBadges={authPriv:'SHA-512 + AES',authNoPriv:'SHA-512, no encryption',noAuthNoPriv:'No authentication'};
 let current={};
+
+function updateSecurityFields(){
+  const level=securityLevel.value;
+  const needsAuth=level!=='noAuthNoPriv';
+  const needsPriv=level==='authPriv';
+  authField.hidden=!needsAuth;
+  form.elements.authKey.disabled=!needsAuth;
+  privField.hidden=!needsPriv;
+  form.elements.privKey.disabled=!needsPriv;
+  levelBadge.textContent=levelBadges[level]||levelBadges.authPriv;
+}
 
 function option(item){
   const element=document.createElement('option');
@@ -33,6 +49,8 @@ async function load(){
   const response=await fetch('/api/config');
   current=await response.json();
   for(const key of ['subnet','username','pollSeconds'])form.elements[key].value=current[key]??'';
+  securityLevel.value=current.securityLevel||'authPriv';
+  updateSecurityFields();
   if(current.hasAuthKey){form.elements.authKey.placeholder='Saved — leave blank to keep';document.querySelector('#authHint').textContent='A key is securely retained locally.'}
   if(current.hasPrivKey){form.elements.privKey.placeholder='Saved — leave blank to keep';document.querySelector('#privHint').textContent='An AES key is securely retained locally.'}
   await loadInterfaces();
@@ -47,6 +65,7 @@ async function waitForDashboard(){
 }
 
 rescan.addEventListener('click',loadInterfaces);
+securityLevel.addEventListener('change',updateSecurityFields);
 form.addEventListener('submit',async event=>{
   event.preventDefault();
   message.className='busy';
