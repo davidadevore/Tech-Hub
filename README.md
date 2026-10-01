@@ -1,10 +1,10 @@
 # Tech Hub
 
-One desktop application for **D’san Ready**, **Lux Link**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, and **Ultrix Panel**. Tech Hub runs all six services and provides a local master page with their status, ports, and shareable network URLs.
+One desktop application for **D’san Ready**, **Lux Link**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, and **Router Panel**. Tech Hub runs all six services and provides a local master page with their status, ports, and shareable network URLs.
 
 ## Downloads
 
-Current desktop release: **0.5.0**. See the [changelog](CHANGELOG.md) for app switching, live settings, backups, diagnostics, and startup update notifications.
+Current desktop release: **0.6.0**. See the [changelog](CHANGELOG.md) for Router Panel/Videohub support, HyperDeck discovery, NETGEAR improvements, and service slider switches.
 
 ### Companion module
 
@@ -49,7 +49,7 @@ This initial build is **ad-hoc signed, not Apple Developer ID signed or notarize
 | Power Monitor | `http://127.0.0.1:8703` | Power devices, phases, services, and alerts |
 | NETGEAR AV Switchboard | `http://127.0.0.1:8704` | SNMPv3 switch discovery, ports, VLAN monitoring, topology |
 | Record Monitor | `http://127.0.0.1:8705` | HyperDeck and AJA Ki Pro status and transport controls |
-| Ultrix Panel | `http://127.0.0.1:8706` | Ross SW-P-08 routing, profiles, and live crosspoints |
+| Router Panel | `http://127.0.0.1:8706` | Ross Ultrix (SW-P-08) and Blackmagic Videohub routing, profiles, and live crosspoints |
 
 ### Configure the new services
 
@@ -57,7 +57,7 @@ Use **Configure switches** on the NETGEAR card to enter the management subnet an
 
 Use **Configure** on Record Monitor to edit its JSON settings. Add entries to `devices`, for example `{"name":"Recorder","type":"hyperdeck","host":"192.168.1.50"}`. Use `kipro` for AJA units. Recording controls default to the host computer only (`controlLocalOnly`); disk formatting is disabled (`allowFormat: false`). Saving restarts only Record Monitor. See its [device options](services/record/README.md).
 
-Use **Configure** on Ultrix Panel to enter `router.host`, confirm its SW-P-08 TCP port, and set levels, visibility rules, and profiles. A blank host keeps it disconnected. The initial configuration has one Video level and operator/viewer profiles; customize these for the router before using TAKE. You can paste an existing Ultrix configuration into this editor. See the [Ultrix configuration guide](services/ultrix/README.md). Facility configuration and exported router names are not included in public downloads.
+Use **Configure routers** on Router Panel (formerly Ultrix Panel) to open its settings page. Like the NETGEAR setup page, it opens only on the Tech Hub computer. Save one or more routers, choose the type (**Ross Ultrix / SW-P-08** or **Blackmagic Videohub**), enter the address and port, and choose which router is **active**. Only the active router connects. Each saved router keeps its own levels, sources, destinations, categories, name overrides and access profiles. Switching the active router reconnects the panel with that router's setup. A blank address keeps a router disconnected. A Videohub has one level. Categories show a live preview of how the active router's names will be grouped. Existing Ultrix Panel settings are upgraded to one saved router automatically. See the [Router Panel configuration guide](services/ultrix/README.md). Facility configuration and exported router names are not included in public downloads.
 
 All six services use the same port-conflict avoidance, password gates, logs, and individual restart controls. Existing Tech Hub ports and passwords survive upgrades. Power Monitor runs without a separate Windows tray icon when launched by Tech Hub; the standalone Power Monitor app retains its own tray.
 
@@ -68,6 +68,8 @@ For another computer, replace `127.0.0.1` with the Tech Hub computer’s LAN IP.
 At startup, Tech Hub tries each saved TCP port. If another application occupies it, Tech Hub binds an available replacement and saves it for future launches. This applies to the master page, service URLs, and internal web servers. The master page and desktop menus follow the actual assignments. Check the master page for updated URLs after a conflict; previously shared URLs may change. Lighting protocol UDP ports remain fixed.
 
 ## Power device discovery
+
+For recorders, open **Record Monitor → Settings → Find HyperDecks** on the Tech Hub computer. Scan one private IP address or a /24 or /23 range. The scan reads TCP 9993 greetings without sending recorder commands; choose **Add**, then **Save settings** to monitor a result. Saved HyperDeck IP addresses are skipped. AJA Ki Pro devices still require manual entry.
 
 Open **Power Monitor → Manage devices → Discover network devices**. Enter one private IP address to inspect that device, or an explicit `/24` or `/23` range to find compatible DKM-411 meters. A bare IP inspects only that address.
 
@@ -97,7 +99,7 @@ Use the dropdown at the top left of any service dashboard to switch directly to 
 
 The master page's **Service enabled** switches stop and start individual apps. Disabled apps retain their configuration and disappear from the dropdown; this choice is saved for the next launch. Their public gateway stays available to show an “off” page, but their monitoring/control process is stopped.
 
-**Record Monitor** and **Ultrix Panel** have an in-app **Settings** button when opened locally on the Tech Hub computer. Record Monitor provides recorder setup, polling and control options. Ultrix provides forms for router connections, levels, source/destination labels and visibility, and profiles. Both apply settings live: only affected recorder connections or changed router connection settings reconnect. Saving never sends recording start/stop commands. Record Monitor uses red accents and Ultrix uses blue accents. These settings forms and the master configuration editor warn before discarding edits and reject saves from a window whose configuration has changed elsewhere.
+**Record Monitor** and **Router Panel** have an in-app **Settings** button when opened locally on the Tech Hub computer. Record Monitor opens its recorder setup, polling and control options. Router Panel opens its settings page (`/setup`) for saved routers, levels, categories, labels, visibility and profiles. Both apply settings live: only affected recorder connections, a changed router connection or a different active router reconnect. Saving never sends recording start/stop commands or router takes. Record Monitor uses red accents and Router Panel uses blue accents. These settings forms and the master configuration editor warn before discarding edits and reject saves from a window whose configuration has changed elsewhere.
 
 The master page's **Backup & troubleshooting** section exports password-encrypted configuration backups and restores them on the Tech Hub computer. Keep the export passphrase: it cannot be recovered. Automatic local snapshots retain the last ten distinct saved configurations; they contain credentials and are restricted to the local account. Backups cover the hub configuration and the six services' saved configuration files, not logs or browser-local layouts. Restoring stops services; quit and reopen Tech Hub to load the restored configuration.
 

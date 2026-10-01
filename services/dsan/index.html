@@ -131,7 +131,7 @@
     #update-dialog p { padding: 0 22px; max-width: 480px; }
     #update-dialog .dialog-actions { padding: 16px 22px; }
     .fullscreen-stage { width: min(100vw, calc(100vh * 16 / 9)); aspect-ratio: 16 / 9; display: grid; grid-template-rows: minmax(0, 1fr) 28%; place-items: center; padding: 3vh 3vw 4vh; background: radial-gradient(circle at 50% 44%, #111a24 0, #05080c 42%, #000 74%); overflow: hidden; }
-    .fullscreen-clock { align-self: end; max-width: 100%; font-family: var(--clock-font); font-size: min(28vw, 49vh); font-weight: 760; line-height: .86; letter-spacing: -.085em; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: center; }
+    .fullscreen-clock { display: flex; justify-content: center; align-self: end; max-width: 100%; font-family: var(--clock-font); font-size: min(28vw, 49vh); font-weight: 760; line-height: .86; letter-spacing: -.085em; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: center; }
     .fullscreen-directions { align-self: start; width: min(64vw, 104vh); display: grid; grid-template-columns: 1fr 1fr; gap: min(4vw, 8vh); place-items: center; }
     .fullscreen-direction { width: min(30vw, 48vh); height: min(19vw, 29vh); max-width: 100%; opacity: .13; transform: scale(.94); transition: opacity .12s, transform .12s, filter .12s; }
     body.has-message .fullscreen-direction { height: min(15vw, 21vh); }
@@ -140,6 +140,11 @@
     .fullscreen-direction.next.active { filter: drop-shadow(0 0 3vw rgba(53,208,127,.58)); }
     .fullscreen-direction.previous { color: var(--red); }
     .fullscreen-direction.previous.active { filter: drop-shadow(0 0 3vw rgba(255,82,99,.58)); }
+    /* PerfectCue disabled: drop the arrow row and center the clock in the stage. */
+    body.cue-disabled .fullscreen-directions, body.cue-disabled .mobile-directions { display: none; }
+    body.cue-disabled .fullscreen-stage { grid-template-rows: minmax(0, 1fr); }
+    body.cue-disabled.has-message .fullscreen-stage { grid-template-rows: minmax(0, 1fr) 24%; }
+    body.cue-disabled .fullscreen-clock { align-self: center; }
     .mobile-view { position: fixed; inset: 0; z-index: 90; display: none; overflow-y: auto; background: #080b10; }
     body.mobile-open { overflow: hidden; }
     body.mobile-open .mobile-view { display: block; }
@@ -545,6 +550,11 @@
       const display = config?.display || {};
       document.documentElement.style.setProperty('--clock-font', fontStacks[display.font] || fontStacks.mono);
       document.body.classList.toggle('hide-lights', display.show_lights === false);
+      const cueDisabled = config?.perfectcue?.enabled === false;
+      if (document.body.classList.contains('cue-disabled') !== cueDisabled) {
+        document.body.classList.toggle('cue-disabled', cueDisabled);
+        fitPresenterDisplay();
+      }
       const signal = latestState?.limitimer?.data?.active?.signal;
       const color = display.fixed_color === false && ['green', 'yellow', 'red'].includes(signal) ? display[`${signal}_color`] : display.clock_color;
       document.documentElement.style.setProperty('--timer-color', color || '#f5f8fb');
@@ -567,11 +577,12 @@
       const left = clock.querySelector('.clock-left');
       const right = clock.querySelector('.clock-right');
       const occupiedWidth = node => node ? Array.from(node.children).reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) : 0;
-      const neededWidth = 2 * Math.max(occupiedWidth(left), occupiedWidth(right)) + (clock.querySelector('.clock-colon')?.getBoundingClientRect().width || 0);
+      const neededWidth = occupiedWidth(left) + occupiedWidth(right) + (clock.querySelector('.clock-colon')?.getBoundingClientRect().width || 0);
       if (neededWidth > width && width > 0) clock.style.fontSize = `${parseFloat(getComputedStyle(clock).fontSize) * width / neededWidth * .98}px`;
       const message = $('presenter-message');
       message.style.fontSize = '';
-      if (rows[2] > 0 && message.scrollHeight > rows[2]) message.style.fontSize = `${parseFloat(getComputedStyle(message).fontSize) * rows[2] / message.scrollHeight * .95}px`;
+      const messageRow = document.body.classList.contains('has-message') ? rows[rows.length - 1] : 0;
+      if (messageRow > 0 && message.scrollHeight > messageRow) message.style.fontSize = `${parseFloat(getComputedStyle(message).fontSize) * messageRow / message.scrollHeight * .95}px`;
     }
     window.addEventListener('resize', fitPresenterDisplay);
     document.addEventListener('fullscreenchange', fitPresenterDisplay);

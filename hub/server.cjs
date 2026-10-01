@@ -7,6 +7,7 @@ const crypto = require('node:crypto');
 const {spawn} = require('node:child_process');
 const {supervise} = require('./supervisor.cjs');
 const serviceConfig = require('./service-config.cjs');
+const hyperdeckDiscovery = require('./hyperdeck-discovery.cjs');
 const backups=require('./backups.cjs');
 const revision=value=>'"'+crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex')+'"';
 const {promisify} = require('node:util');
@@ -17,7 +18,7 @@ const definitions = [
   {id:'power', name:'Power Monitor', detail:'Power distribution', port:8703, backendPort:18703},
   {id:'netgear', name:'NETGEAR AV Switchboard', detail:'Switch discovery & monitoring', port:8704, backendPort:18704},
   {id:'record', name:'Record Monitor', detail:'HyperDeck & AJA Ki Pro', port:8705, backendPort:18705},
-  {id:'ultrix', name:'Ultrix Panel', detail:'Ross router control', port:8706, backendPort:18706},
+  {id:'ultrix', name:'Router Panel', detail:'Ross Ultrix & Blackmagic Videohub control', port:8706, backendPort:18706},
 ];
 const root = path.resolve(__dirname, '..');
 function save(file, data) {
@@ -54,7 +55,7 @@ function sameOrigin(req) { return req.headers['sec-fetch-site']!=='cross-site' &
 function listen(server,port,host) { return new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,()=>{server.removeListener('error',reject);resolve();});}); }
 function close(server) { server.closeAllConnections(); return new Promise(resolve=>server.close(resolve)); }
 function ips(host) { return host==='127.0.0.1'?[]:[...new Set(Object.values(os.networkInterfaces()).flat().filter(n=>n&&!n.internal&&n.family==='IPv4').map(n=>n.address))]; }
-function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><script src="/__hub/ultrix-editor.js" defer></script><script src="/__hub/chrome.js" defer></script><link rel="icon" type="image/svg+xml" href="/__hub/favicon.svg"><style>:root{color-scheme:dark}body{background:#071015;color:#f2f7f5;font:16px system-ui;min-height:95vh;margin:0}main{width:min(360px,85vw);margin:8vh auto}main>p:first-child{color:#ff8a1f;font-weight:700;letter-spacing:.15em}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #31505a;font:inherit}input{background:#0c181e;color:#f2f7f5}button{background:#ff8a1f;color:#1b0d02;border-color:#ff8a1f;font-weight:650;cursor:pointer}button:hover{background:#ffa24f}input:focus-visible,button:focus-visible{outline:2px solid #ff8a1f;outline-offset:3px}p{color:#8ca3aa}p[role=alert]{color:#ff7a7a}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
+function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><script src="/__hub/chrome.js" defer></script><link rel="icon" type="image/svg+xml" href="/__hub/favicon.svg"><style>:root{color-scheme:dark}body{background:#071015;color:#f2f7f5;font:16px system-ui;min-height:95vh;margin:0}main{width:min(360px,85vw);margin:8vh auto}main>p:first-child{color:#ff8a1f;font-weight:700;letter-spacing:.15em}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #31505a;font:inherit}input{background:#0c181e;color:#f2f7f5}button{background:#ff8a1f;color:#1b0d02;border-color:#ff8a1f;font-weight:650;cursor:pointer}button:hover{background:#ffa24f}input:focus-visible,button:focus-visible{outline:2px solid #ff8a1f;outline-offset:3px}p{color:#8ca3aa}p[role=alert]{color:#ff7a7a}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
 async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), launch=true,checkUpdates=launch}={}) {
   const updates=require('./updates.cjs').createUpdateChecker(require('../package.json').version);
   const config=loadConfig(dir), sessions=new Map(), attempts=new Map(), states=new Map(), servers=[],supervisors=new Map();
@@ -64,6 +65,21 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   const local=req=>['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)&&['localhost','127.0.0.1','[::1]'].includes(new URL('http://'+req.headers.host).hostname);
   const chrome=require('./service-chrome.cjs');
   const navigation=(req,id)=>({current:id,adminPort:config.adminPort,local:local(req),settings:local(req)&&['record','ultrix'].includes(id),services:services.filter(s=>config.services[s.id].enabled).map(s=>({id:s.id,name:s.name,port:s.port,protected:!!config.services[s.id].password,state:states.get(s.id)?.state}))});
+  let discovering=false;
+  async function discoverHyperDecks(req,res){
+    if(!local(req)||!sameOrigin(req))return send(res,403,{error:'Discovery is available only on the Tech Hub computer.'});
+    if(req.method==='GET')return send(res,200,{suggestions:hyperdeckDiscovery.suggestions()});
+    if(req.method!=='POST'||!/^application\/json/.test(req.headers['content-type']||''))return send(res,405,{error:'Use the settings dialog to scan.'});
+    if(discovering)return send(res,409,{error:'A scan is already running.'});
+    discovering=true;
+    try{
+      const {target}=JSON.parse(await readBody(req));
+      // Older HyperDecks accept one control connection; probing a monitored deck could drop its monitoring.
+      const skip=serviceConfig.read(dir,'record').devices.filter(x=>x.type==='hyperdeck'&&(x.port??9993)===9993).map(x=>x.host.trim());
+      return send(res,200,await hyperdeckDiscovery.scan(target,{skip}));
+    }catch(error){return send(res,400,{error:error.message});}
+    finally{discovering=false;}
+  }
   async function configure(req,res,id){
     if(!local(req)||!sameOrigin(req))return send(res,403,{error:'Settings are available only on the Tech Hub computer.'});
     if(req.method==='GET'){const value=serviceConfig.read(dir,id);res.setHeader('ETag',revision(value));return send(res,200,value);}
@@ -219,6 +235,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         if(!authed) return send(res,401,req.url.startsWith('/api/')?{error:'Service password required'}:loginPage(d.name),req.url.startsWith('/api/')?'application/json':'text/html');
         if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,navigation(req,d.id));
         if(req.url==='/__hub/settings'&&['record','ultrix'].includes(d.id))return await configure(req,res,d.id);
+        if(req.url==='/__hub/discover-hyperdecks'&&d.id==='record')return await discoverHyperDecks(req,res);
         if(!config.services[d.id].enabled)return send(res,503,chrome.disabled(d.name),'text/html');
         if(states.get(d.id).state!=='running')return send(res,503,req.url.startsWith('/api/')?{error:'Service reconnecting'}:chrome.disabled(d.name,'Reconnecting. You can choose another app above.','reconnecting'),req.url.startsWith('/api/')?'application/json':'text/html');
         if(req.url.startsWith('/api/update')&&d.id==='power')return send(res,200,{current_version:require('../package.json').version,available:false,error:'Power Monitor is bundled with Tech Hub. Update the complete app from the Tech Hub release page.'});
@@ -226,7 +243,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         const headers={...req.headers,host:`127.0.0.1:${d.backendPort}`}; delete headers.cookie;delete headers.authorization;
         headers['x-techhub-local-client']=['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)?'1':'0';
         headers['accept-encoding']='identity';
-        // Preserve only Ultrix's profile session, never another service's cookies.
+        // Preserve only Router Panel's profile session, never another service's cookies.
         if(d.id==='ultrix'&&/^[a-f0-9]+$/.test(cookies.techhub_ultrix_profile||''))headers.cookie=`sid=${cookies.techhub_ultrix_profile}`;
         if(headers.origin)headers.origin=`http://127.0.0.1:${d.backendPort}`;
         activeResponses.get(d.id).add(res);

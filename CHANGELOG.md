@@ -1,6 +1,14 @@
 # Changelog
 
-## Next build
+## 0.6.0 — 2026-10-01
+
+- Renamed Ultrix Panel to **Router Panel** and added **Blackmagic Videohub** support (Videohub Ethernet Protocol 2.3, TCP 9990) alongside Ross Ultrix / SW-P-08. The Videohub client uses the router's live pushes, pings every 15 seconds, reconnects on a missed acknowledgement, and never sends a change in watch-only mode.
+- Router Panel can store several routers; one is active at a time. Each keeps its own levels, lists, categories and profiles. Existing single-router settings are upgraded automatically; the service ID, ports, backups and profile sign-ins are unchanged.
+- Added a Router Panel settings page, like NETGEAR's setup page and restricted to the Tech Hub computer. It includes a live category preview from the active router's names and replaces the Ultrix settings forms.
+- Restored Router Panel's **Revert** button for the previous route on changed levels, subject to profile permissions, and the fix that reports a busy panel port instead of silently failing.
+- Added local HyperDeck discovery from Record Monitor settings using TCP 9993 greetings, with explicit Add and Save controls. AJA devices remain manually configured.
+- Added selectable NETGEAR SNMPv3 security levels, including authentication without encryption, and improved trunk-port indicators and tagged-VLAN details.
+- Improved D’san full-screen clock fitting and centered the clock when PerfectCue arrows are disabled.
 
 - Replaced service checkboxes with slider switches labeled “Service enabled” and “Service disabled,” with keyboard focus and reduced-motion support.
 

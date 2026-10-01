@@ -191,6 +191,8 @@ function renderNamesInfo() {
 
 function renderAll() {
   $('title').textContent = state.cfg?.title ?? 'Router';
+  $('routerName').textContent = state.cfg?.router?.name ?? '';
+  $('routerName').hidden = !state.cfg?.router?.name;
   document.title = state.cfg?.title ?? 'Router Panel';
   $('auto').checked = state.auto;
   renderStatus();

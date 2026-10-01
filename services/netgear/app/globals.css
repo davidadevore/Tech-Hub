@@ -90,8 +90,7 @@
 @media(max-width:760px){.topology-canvas{height:calc(100vh - 245px);min-height:620px;overflow:auto}.topology-node{width:210px}.topology-actions{flex-wrap:wrap}.network-state.live{max-width:190px;font-size:8px}}
 .inline-error{margin-top:11px;padding:10px;border:1px solid #883d3d;background:#451d1d;color:#ffaaa4;border-radius:7px;font-size:9px;line-height:1.4}.current-vlan{display:flex;align-items:center;gap:10px;background:#0f151b;border:1px solid #35414d;border-radius:7px;padding:10px}.current-vlan>i{width:8px;height:25px;border-radius:4px;background:var(--vlan-color)}.current-vlan span strong,.current-vlan span small{display:block}.current-vlan span small{margin-top:3px;color:#84919e}
 
-/* Trunk ports (tagged-VLAN egress members beyond their native VLAN) get a dashed outline layered over the
-   existing VLAN-color border/media styling, plus a text badge and a tagged-VLAN breakdown where there's room. */
+/* Trunk ports use an outline, not border-style, so the marker layers over the existing SFP double-border styling. */
 .mini-ports i.trunk,.topology-node-ports i.trunk,.chassis-ports button.trunk{outline:1px dashed var(--port-outline,currentColor);outline-offset:1px}
 .trunk-chip{display:block;width:fit-content;margin-top:4px;padding:1px 6px;border-radius:99px;border:1px solid #2f6da8;color:#7cc2ff;font-size:7px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
 .trunk-detail{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
