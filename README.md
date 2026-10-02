@@ -4,7 +4,7 @@ One desktop application for **D’san Ready**, **Lux Link**, **Power Monitor**, 
 
 ## Downloads
 
-Current desktop release: **0.5.0**. See the [changelog](CHANGELOG.md) for app switching, live settings, backups, diagnostics, and startup update notifications.
+Current desktop release: **0.6.0**. See the [changelog](CHANGELOG.md) for Router Panel/Videohub support, HyperDeck discovery, NETGEAR improvements, and service slider switches.
 
 ### Companion module
 
@@ -68,6 +68,8 @@ For another computer, replace `127.0.0.1` with the Tech Hub computer’s LAN IP.
 At startup, Tech Hub tries each saved TCP port. If another application occupies it, Tech Hub binds an available replacement and saves it for future launches. This applies to the master page, service URLs, and internal web servers. The master page and desktop menus follow the actual assignments. Check the master page for updated URLs after a conflict; previously shared URLs may change. Lighting protocol UDP ports remain fixed.
 
 ## Power device discovery
+
+For recorders, open **Record Monitor → Settings → Find HyperDecks** on the Tech Hub computer. Scan one private IP address or a /24 or /23 range. The scan reads TCP 9993 greetings without sending recorder commands; choose **Add**, then **Save settings** to monitor a result. Saved HyperDeck IP addresses are skipped. AJA Ki Pro devices still require manual entry.
 
 Open **Power Monitor → Manage devices → Discover network devices**. Enter one private IP address to inspect that device, or an explicit `/24` or `/23` range to find compatible DKM-411 meters. A bare IP inspects only that address.
 

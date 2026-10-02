@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-10-01
 
 - Renamed Ultrix Panel to **Router Panel** and added **Blackmagic Videohub** support (Videohub Ethernet Protocol 2.3, TCP 9990) alongside Ross Ultrix / SW-P-08. The Videohub client uses the router's live pushes, pings every 15 seconds, reconnects on a missed acknowledgement, and never sends a change in watch-only mode.
 - Router Panel can store several routers; one is active at a time. Each keeps its own levels, lists, categories and profiles. Existing single-router settings are upgraded automatically; the service ID, ports, backups and profile sign-ins are unchanged.
@@ -11,6 +11,12 @@
 - NETGEAR: an SNMP walk can no longer hang a switch's refresh indefinitely; walks and reads have deadlines.
 - NETGEAR: a switch's Refresh button re-reads only that switch, and the open port sheet updates live.
 - NETGEAR endpoint IPs and names for ports that only showed a MAC: routers' ARP tables over SNMP (new **Endpoint names** settings, every VLAN they route), this computer's ARP table, and Bonjour/mDNS device names (e.g. "CAM1", "ATEM Constellation 8K"), all matched to the MAC each switch port learned. macOS hides its ARP table from apps, so on a Mac host the router source is what links names to ports.
+- Restored Router Panel's **Revert** button for the previous route on changed levels, subject to profile permissions, and the fix that reports a busy panel port instead of silently failing.
+- Added local HyperDeck discovery from Record Monitor settings using TCP 9993 greetings, with explicit Add and Save controls. AJA devices remain manually configured.
+- Added selectable NETGEAR SNMPv3 security levels, including authentication without encryption, and improved trunk-port indicators and tagged-VLAN details.
+- Improved D’san full-screen clock fitting and centered the clock when PerfectCue arrows are disabled.
+
+- Replaced service checkboxes with slider switches labeled “Service enabled” and “Service disabled,” with keyboard focus and reduced-motion support.
 
 ## 0.5.0 — 2026-09-23
 
