@@ -8,7 +8,28 @@ on:
 permissions:
   contents: read
 jobs:
+  apps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.19.0'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir services/netgear install --frozen-lockfile
+      - run: node scripts/build-universal.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-apps
+          path: |
+            dist/app-packages-universal
+            dist/Tech-Hub-All-Apps.zip
+            dist/tech-hub-catalog.json
   windows:
+    needs: apps
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,11 +49,14 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: '11.19.0'
+      - run: pnpm install --frozen-lockfile
       - run: python -m pip install -r requirements-build.txt
-      - run: pnpm --dir services/lux install --frozen-lockfile
-      - run: pnpm --dir services/netgear install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: universal-apps
+          path: dist
       - run: python -m unittest discover -s services/dsan -p "test_*.py"
-      - run: node --test tests/*.test.cjs services/lux/tests/fetch-signal-snapshot.test.mjs services/ultrix/test/*.test.js services/netgear/test/*.test.mjs
+      - run: node --test tests/*.test.cjs services/ultrix/test/*.test.js services/netgear/test/*.test.mjs
       - run: go -C services/power test ./...
       - run: ./scripts/build-windows.ps1
         shell: pwsh
@@ -43,9 +67,9 @@ jobs:
         with:
           name: windows-installer
           path: |
-            dist/Tech-Hub-Windows-x64-Setup.exe
-            dist/Tech-Hub-Windows-x64-Setup.exe.sha256
+            dist/Tech-Hub-Windows-x64-*.exe*
   mac:
+    needs: apps
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -62,11 +86,14 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: '11.19.0'
+      - run: pnpm install --frozen-lockfile
       - run: python -m pip install -r requirements-build.txt
-      - run: pnpm --dir services/lux install --frozen-lockfile
-      - run: pnpm --dir services/netgear install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: universal-apps
+          path: dist
       - run: python -m unittest discover -s services/dsan -p "test_*.py"
-      - run: node --test tests/*.test.cjs services/lux/tests/fetch-signal-snapshot.test.mjs services/ultrix/test/*.test.js services/netgear/test/*.test.mjs
+      - run: node --test tests/*.test.cjs services/ultrix/test/*.test.js services/netgear/test/*.test.mjs
       - run: go -C services/power test ./...
       - run: bash scripts/build-mac.sh
       - run: node scripts/smoke-bundle.cjs "dist/Tech Hub.app/Contents/Resources"
@@ -74,11 +101,10 @@ jobs:
         with:
           name: mac-installer
           path: |
-            dist/Tech-Hub-macOS-arm64.dmg
-            dist/Tech-Hub-macOS-arm64.dmg.sha256
+            dist/Tech-Hub-macOS-arm64*.dmg*
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows, mac]
+    needs: [apps, windows, mac]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -88,7 +114,25 @@ jobs:
         with:
           path: installers
           merge-multiple: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --ignore-scripts
+      - name: Prepare catalog and SDK
+        run: |
+          find installers -mindepth 2 -type f -name '*.zip' -exec mv {} installers/ \;
+          rm -f installers/app-packages-universal/catalog.json
+          find installers -mindepth 1 -type d -empty -delete
+          node scripts/release-catalog.cjs installers
+          node scripts/release-notes.cjs installers/tech-hub-catalog.json > /tmp/techhub-release-notes.md
       - name: Publish installers together
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" installers/* --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file RELEASE_NOTES.md --verify-tag
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft > /tmp/techhub-release-draft; then
+            test "$(cat /tmp/techhub-release-draft)" = true || { echo 'Refusing to overwrite a published release'; exit 1; }
+            gh release upload "$GITHUB_REF_NAME" installers/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" installers/* --draft --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file /tmp/techhub-release-notes.md --verify-tag
+          fi
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file /tmp/techhub-release-notes.md

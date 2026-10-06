@@ -7,3 +7,14 @@ These applications run as separate local services under Tech Hub's supervisor.
 - **Router Panel** (formerly Ultrix Panel) — supplied by the Tech Hub owner. Original source is preserved in `services/ultrix/`, with managed ports and disconnected startup until a router is configured. Blackmagic Videohub support implements Blackmagic Design's published Videohub Ethernet Protocol; no Blackmagic code is included. Facility configuration and exported router data are not distributed.
 
 NETGEAR's runtime dependencies retain their own licenses in their package directories. Its dashboard is built with Next.js and React. Source distributions retain the dependency lockfiles needed to rebuild it.
+# LAN hostname discovery
+
+Tech Hub bundles [bonjour-service](https://github.com/onlxltd/bonjour-service) (MIT) and its dependencies for Bonjour/mDNS service advertisements. Dependency license files are included alongside the bundled modules.
+
+## adm-zip
+
+App archive creation and validation use adm-zip 0.6.1 (MIT). Its license is included with the bundled dependency. Source: https://github.com/cthackers/adm-zip
+
+## R-Too
+
+Adapted from [Devore’s D80-Panel](https://github.com/davidadevore/D80-Panel), commit `0c802d95a14b33f10d8bd7e2943de6ef29825dcf` (MIT; notice retained in `services/rtoo/LICENSE-UPSTREAM`). Uses AES70.js 2.0.20 (GPL-2.0-only) and bonjour-service 1.4.4 (MIT). The combined R-Too module is distributed under GPL-2.0-only, with the upstream MIT notice retained. Its package contains readable source and complete dependency source/license files; see `services/rtoo/README.md`. It runs in a separate module process. No d&b affiliation or endorsement is implied.

@@ -55,7 +55,7 @@ test('Ultrix profile cookies and event streams survive the gateway; access chang
    });await new Promise(resolve=>server.listen(29211+i,'127.0.0.1',resolve));backends.push(server);
   }
   fs.writeFileSync(path.join(dir,'config.json'),JSON.stringify(config));hub=await startHub({dir,launch:false});
-  const base='http://127.0.0.1:29206',response=await fetch(base,{headers:{Cookie:'techhub_ultrix_profile=abc123; techhub_dsan=secret','x-techhub-local-client':'0'}});
+  const base='http://127.0.0.1:29205',response=await fetch(base,{headers:{Cookie:'techhub_ultrix_profile=abc123; techhub_dsan=secret','x-techhub-local-client':'0'}});
   assert.deepEqual(await response.json(),{cookie:'sid=abc123',local:'1'});
   assert.deepEqual(response.headers.getSetCookie(),['techhub_ultrix_profile=abc123; HttpOnly; SameSite=Strict; Path=/']);
   // NETGEAR's edit unlock rides the same mechanism under its own cookie; neither service sees the other's session.

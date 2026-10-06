@@ -1,30 +1,31 @@
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const resources=path.resolve(process.argv[2]);process.env.TECH_HUB_RESOURCES=resources;
+assert.equal(typeof require(require.resolve('bonjour-service',{paths:[resources]})).Bonjour,'function','Bundled mDNS dependencies must load');
 const {startHub,loadConfig,hashPassword}=require(path.join(resources,'hub/server.cjs'));
 (async()=>{const dir=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'tech-hub-smoke-'));let hub;const blockers=[];
 try {
  const c=loadConfig(dir);c.host='127.0.0.1';c.adminPort=30700;
- ['dsan','lux','power','netgear','record','ultrix'].forEach((id,i)=>Object.assign(c.services[id],{port:30701+i,backendPort:30711+i}));
- c.services.lux.password=await hashPassword('smoke-test-only');fs.writeFileSync(path.join(dir,'config.json'),JSON.stringify(c));
+ ['dsan','power','netgear','record','ultrix','rtoo'].forEach((id,i)=>Object.assign(c.services[id],{port:30701+i,backendPort:30711+i}));
+ c.services.power.password=await hashPassword('smoke-test-only');fs.writeFileSync(path.join(dir,'config.json'),JSON.stringify(c));
  for(const port of [30700,30702,30711]){const server=http.createServer((req,res)=>res.end('unrelated'));await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});blockers.push(server);}
  hub=await startHub({dir});
  for(let i=0;i<100&&!hub.status().services.every(s=>s.state==='running');i++)await new Promise(r=>setTimeout(r,300));
  assert.equal(hub.status().services.length,6);
  assert(hub.status().services.every(s=>s.state==='running'),JSON.stringify(hub.status()));
- assert.notEqual(hub.config.adminPort,30700);assert.notEqual(hub.config.services.lux.port,30702);assert.notEqual(hub.config.services.dsan.backendPort,30711);
+ assert.notEqual(hub.config.adminPort,30700);assert.notEqual(hub.config.services.power.port,30702);assert.notEqual(hub.config.services.dsan.backendPort,30711);
  const admin=`http://127.0.0.1:${hub.config.adminPort}`;
  assert.match(await fetch(admin+'/app.js').then(r=>r.text()),/Set password/);
  for(const s of hub.status().services){
-   const r=await fetch(s.localURL);assert.equal(r.status,s.id==='lux'?401:200);
+   const r=await fetch(s.localURL);assert.equal(r.status,s.id==='power'?401:200);
    assert.match(await r.text(),/rel="icon"/);
    const icon=await fetch(s.localURL+'/__hub/favicon.svg');assert.equal(icon.status,200);
    assert.match(icon.headers.get('content-type'),/image\/svg\+xml/);
    assert.equal(await icon.text(),fs.readFileSync(path.join(resources,'hub',`icon-${s.id}.svg`),'utf8'));
  }
  assert.equal(await fetch(admin+'/__hub/favicon.svg').then(r=>r.text()),fs.readFileSync(path.join(resources,'hub/icon-hub.svg'),'utf8'));
- const lux=hub.status().services.find(s=>s.id==='lux').localURL;
- const login=await fetch(lux+'/__hub/login',{method:'POST',body:new URLSearchParams({password:'smoke-test-only'}),redirect:'manual'});assert.equal(login.status,303);
- assert.equal((await fetch(lux,{headers:{Cookie:login.headers.get('set-cookie').split(';')[0]}})).status,200);
+ const power=hub.status().services.find(s=>s.id==='power').localURL;
+ const login=await fetch(power+'/__hub/login',{method:'POST',body:new URLSearchParams({password:'smoke-test-only'}),redirect:'manual'});assert.equal(login.status,303);
+ assert.equal((await fetch(power,{headers:{Cookie:login.headers.get('set-cookie').split(';')[0]}})).status,200);
  const service=id=>hub.status().services.find(s=>s.id===id).localURL;
  const netgear=service('netgear'),record=service('record'),ultrix=service('ultrix');
  assert.equal((await fetch(netgear+'/api/health')).status,200);
@@ -47,7 +48,7 @@ try {
  assert.equal((await restart()).status,200);
  for(let i=0;i<100&&hub.status().services.find(s=>s.id==='dsan').state!=='running';i++)await new Promise(r=>setTimeout(r,100));
  assert(hub.status().services.every(s=>s.state==='running'),JSON.stringify(hub.status()));
- assert.equal((await fetch(lux)).status,401);
+ assert.equal((await fetch(power)).status,401);
  console.log('PASS: bundled services running on reassigned ports; password gate and login verified; Set password label bundled; individual restart preserves other services and passwords.');
 } catch(e){console.error('Smoke logs: '+dir);throw e;} finally {await hub?.stop();await Promise.all(blockers.map(s=>new Promise(r=>{s.closeAllConnections();s.close(r);})));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

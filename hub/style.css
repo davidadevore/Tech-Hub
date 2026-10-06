@@ -27,3 +27,19 @@
 
 .card.ultrix{--accent:#55b5ff}.card.record{--accent:#ff727c}
 #maintenance{border:1px solid var(--line);border-radius:12px;margin:24px 0;padding:22px;background:var(--panel)}#maintenance p{font-size:13px;color:var(--muted-bright)}#backupDialog,#diagnosticsDialog{max-width:850px;max-height:88dvh;overflow:auto}#backupDialog>button{margin:12px 0}#backupError{color:var(--red)}#backupDialog select{width:100%;padding:12px;background:var(--bg);color:var(--text);font:inherit;border:1px solid var(--line-bright)}#diagnosticResults section{border-bottom:1px solid var(--line);padding:12px 0}#diagnosticResults p{overflow-wrap:anywhere}#restoreNotice:not(:empty){color:var(--brand)}
+
+#networkNames{border:1px solid var(--line);border-radius:12px;margin:24px 0;padding:22px;background:var(--panel)}#networkNames p{overflow-wrap:anywhere}#machineSuffix{width:100%;max-width:420px;display:block;margin:10px 0}#namingStatus a{color:var(--brand)}
+
+.hostnameFields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px}.hostnameFields label{display:flex;flex-direction:column;gap:8px;min-width:0}.hostnameFields input{width:100%;min-width:0}
+
+#settingsDialog,#devicesDialog{width:min(850px,94vw);max-width:94vw;max-height:90dvh;overflow:auto}#adminPassword{width:100%;max-width:420px}#adminAccessURLs p{overflow-wrap:anywhere;font-family:ui-monospace,monospace}#settingsDialog .serviceToggle{align-items:center}#settingsDialog .serviceSlider{flex-shrink:0}#settingsDialog #networkNames{margin-bottom:0}.deviceRow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;padding:16px 0;border-bottom:1px solid var(--line)}.deviceRow code{overflow-wrap:anywhere}#logoutForm{margin:0}header .actions{flex-wrap:wrap}#updates{margin-top:24px}@media(max-width:650px){header{height:auto;min-height:106px;padding-top:18px;padding-bottom:18px;flex-wrap:wrap;gap:16px}.deviceRow{grid-template-columns:1fr}.updateHeading{flex-wrap:wrap;gap:12px}}
+
+#libraryDialog{width:min(900px,calc(100vw - 24px));max-width:900px}#libraryApps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin:20px 0}.libraryCard{padding:18px;border:1px solid #28434d;border-radius:10px}.librarySelect{display:flex;gap:12px;align-items:center}.librarySelect input{width:22px;height:22px;margin:0}.libraryCard .actions{flex-wrap:wrap}.libraryCard p{overflow-wrap:anywhere}#libraryDialog>.actions{flex-wrap:wrap}
+
+#localAppReview{width:min(600px,calc(100vw - 24px));max-width:600px}.packageHash{overflow-wrap:anywhere;font-family:ui-monospace,monospace;font-size:12px}#localAppReview .serviceToggle input{width:22px;height:22px;position:static;opacity:1}
+
+#libraryDialog button:disabled,#localAppReview button:disabled{opacity:.45;cursor:not-allowed}
+
+.connectionBar{margin:0 5vw 24px;gap:16px}.connectionBar>span:first-child{min-width:0}.connectionBar>span:last-child{white-space:nowrap}@media(max-width:560px){.connectionBar{align-items:flex-start}.connectionBar>span:first-child{display:flex;align-items:baseline;gap:8px}.connectionBar .dot{flex-shrink:0;margin-right:0}}
+
+.moduleBrowse{border-top:1px solid #28434d;margin-top:24px;padding-top:12px}.browseFilters{display:grid;grid-template-columns:2fr 1fr;gap:16px}.browseFilters label{display:grid;gap:8px}.browseFilters input,.browseFilters select{width:100%;min-width:0;margin:0;padding:12px;background:#102027;color:#edf4f5;border:1px solid #34505a;border-radius:8px;font:inherit}@media(max-width:560px){.browseFilters{grid-template-columns:1fr}}

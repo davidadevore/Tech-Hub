@@ -1,5 +1,63 @@
 # Changelog
 
+## Unreleased
+
+- Add a compact AI SDK starting guide, per-module brief/agent scaffolding, and standalone development CLI with context, structured checks, isolated-data administrator/viewer previews and packaging. Full host integration still requires real Tech Hub testing.
+
+
+## 1.0.3 — 2026-10-06
+
+- Add searchable module browsing with availability/installation/update filters, optional developer attribution and source links. Add a GitHub developer submission form, review/publishing guide, and an offline catalog validation tool for publishing approved modules without a new host installer.
+
+- Add R-Too 1.0.0, a universal, read-only d&b amplifier monitoring module based on Devore’s D80-Panel. Includes fleet/meters/detail views, portable OCA discovery, live settings, manual addresses, administrator-only fault acknowledgements, reconnect handling and stale-data warnings. The standalone package can be imported into Tech Hub 1.0.1+; included in the catalog and Full installers.
+
+## 1.0.2 — 2026-10-06
+
+- Move the connection-status and version bar directly below the page footer.
+
+- Rename installable apps to modules throughout the host interface and SDK documentation; retain existing package and API names for compatibility.
+- Show module versions on dashboard cards and installed/catalog versions in Module Library. Add Check for updates, Update all, last-checked time, and incompatible-update guidance.
+- Keep official module versions independent of host versions in modules.json. Avoid implicit downgrades from older catalogs; unofficial modules remain manually updated.
+
+## 1.0.1 — 2026-10-06
+
+- One universal app package per service, usable on Mac and Windows, plus a single **Tech-Hub-All-Apps.zip** offline download.
+- Shared host runtime: Node 24 and versioned SDK helpers for persistent settings, bounded JSON requests, administrator checks, and HTTP startup.
+- D’san and Power Monitor use host-managed native compatibility engines. Their tested protocol implementations are retained; UI packages no longer carry platform runtimes. Protocol-engine updates require a host update.
+- Lux Link is paused and removed from the catalog, navigation, and new installers. Existing Lux settings and installed package data are retained.
+- SDK updated with a universal starter, shared-runtime contract, packaging rules, and detailed instructions for AI-assisted development.
+- Existing service ports, passwords and settings are preserved. Legacy v1.0.0 packages remain supported for the five active apps; update them through App Library.
+
+Choose **Host** to install apps from the App Library or **Full** for the five apps included offline. Mac and Windows installers remain separate. The universal ZIP works on either supported host. Protocol engines have not been rewritten; device behavior still depends on your hardware and network.
+
+
+## 1.0.0 — 2026-10-06
+
+- Modular host with an in-app App Library: install one app, selected apps, or all six official apps.
+- Separate Host and Full installers for macOS Apple silicon and Windows x64. Full includes every app for offline setup.
+- Platform-specific all-apps ZIP downloads, individual app packages, an official catalog, and SDK download linked in the README.
+- App updates, rollback, and uninstall retain settings. Downloads are checksum-verified and validated before activation; failed starts restore the previous package.
+- Existing service configuration, passwords, port assignments, and enabled states survive migration. Previously enabled apps can be reinstalled together.
+- Shared navigation lists installed, enabled apps. Host updates remain separate from app updates.
+- Install local app ZIPs for testing outside the catalog, with a review/confirmation step, unofficial labels, manual updates, rollback, and settings retention.
+- Developer SDK with a working Node starter, packaging/validation tools, app contract, design guide, and detailed AI development instructions.
+
+Full installers require no internet to install the included apps. Offline ZIP imports must match a trusted catalog. New third-party catalog apps require reopening the host once after first installation. Installed apps run with the desktop user's permissions; catalog submissions require review.
+
+Mac: macOS 13+, Apple silicon, ad-hoc signed. Windows: Windows 10 1809+/11 x64, unsigned per-user installer. Existing Companion 1.0.3 remains compatible.
+
+
+## 0.7.1 — 2026-10-06
+
+- Replace the header admin badge with Settings and Connected Devices buttons. Move Local Network Names into Settings, move Updates above Backup & Restore, and remove the dashboard subtitle.
+- Add optional password-protected network administration. Administrator passwords accept 4 or more characters; sessions expire after one hour, sign-in attempts are rate-limited, and changing access or the password revokes remote sessions. Remote access starts disabled.
+- Add an admin-only Connected Devices view showing active browser page IPs, services, session counts, and last activity. Pages check in every 15 seconds and expire after 60 seconds without activity; no network scan is performed.
+
+## 0.7.0 — 2026-10-06
+
+- Add short LAN names (`dsan.local`, `lux.local`, `pd.local`, `netgear.local`, `record.local`, `router.local`) with a user-entered machine identifier and editable per-service hostnames, including the Tech Hub directory. Accept names with or without `.local` and reject duplicate or invalid hostnames. Advertise enabled services over Bonjour/mDNS, detect reported name conflicts, and withdraw names on disable or shutdown.
+- Add an optional shared HTTP port 80 listener for URLs without port numbers, plus a `tech.local` app directory. Preserve service password checks and local-only administration; fall back to assigned ports when port 80 is unavailable. Configure and retry from the master page without restarting services. Update the app switcher to follow each service’s hostname.
+
 ## 0.6.0 — 2026-10-01
 
 - Renamed Ultrix Panel to **Router Panel** and added **Blackmagic Videohub** support (Videohub Ethernet Protocol 2.3, TCP 9990) alongside Ross Ultrix / SW-P-08. The Videohub client uses the router's live pushes, pings every 15 seconds, reconnects on a missed acknowledgement, and never sends a change in watch-only mode.

@@ -9,24 +9,22 @@ $resources = Join-Path $app 'resources'
 if (Test-Path $app) { Remove-Item $app -Recurse -Force }
 New-Item $resources -ItemType Directory -Force | Out-Null
 Checked { dotnet publish native-windows/TechHub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true "-p:Version=$version" -o $app }
-Checked { go -C services/power build -trimpath -o "$resources/power-server.exe" . }
+New-Item "$resources/drivers/power" -ItemType Directory -Force | Out-Null
+Checked { go -C services/power build -trimpath -o "$resources/drivers/power/power-server.exe" . }
 Checked { python -m PyInstaller --noconfirm --clean --onedir --name dsan-server --distpath build/windows-python-dist --workpath build/windows-python-work --specpath build --add-data "$projectDir/services/dsan/index.html;." services/dsan/app.py }
-Copy-Item build/windows-python-dist/dsan-server "$resources/dsan" -Recurse
-Checked { node services/lux/node_modules/vite/bin/vite.js build --config services/lux/desktop/vite.config.ts }
-New-Item "$resources/lux" -ItemType Directory -Force | Out-Null
-Copy-Item services/lux/desktop-web "$resources/lux/dashboard" -Recurse
-Copy-Item services/lux/electron,services/lux/lib "$resources/lux" -Recurse
-Copy-Item services/lux/package.json "$resources/lux/package.json"
+Copy-Item build/windows-python-dist/dsan-server "$resources/drivers/dsan" -Recurse
 Copy-Item (Get-Command node).Source "$resources/node.exe"
 Copy-Item hub "$resources/hub" -Recurse
 Copy-Item package.json "$resources/package.json"
-Push-Location services/netgear
-try { Checked { node node_modules/next/dist/bin/next build } } finally { Pop-Location }
-Checked { node scripts/bundle-services.cjs $resources }
+if (!(Test-Path dist/app-packages-universal/catalog.json)) { Checked { node scripts/build-universal.cjs } }
+Checked { node scripts/bundle-services.cjs $resources --host-only }
+Copy-Item dist/app-packages-universal/catalog.json "$resources/catalog.json"
 $compiler = "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe"
 if (!(Test-Path $compiler)) { throw 'Install Inno Setup 6 before building the installer.' }
 Checked { & $compiler "/DAppVersion=$version" scripts/windows-installer.iss }
-Get-ChildItem dist/Tech-Hub-Windows-x64-Setup.exe | ForEach-Object {
+Copy-Item dist/app-packages-universal "$resources/offline-apps" -Recurse
+Checked { & $compiler "/DAppVersion=$version" '/DOutputName=Tech-Hub-Windows-x64-Full-Setup' scripts/windows-installer.iss }
+Get-ChildItem dist/Tech-Hub-Windows-x64-*.exe | ForEach-Object {
     $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
     "$hash  $($_.Name)" | Set-Content "$($_.FullName).sha256" -Encoding ascii
 }

@@ -28,7 +28,7 @@ from discovery import scan_network
 
 
 ROOT = Path(__file__).resolve().parent
-INDEX_PATH = ROOT / "index.html"
+INDEX_PATH = Path(os.environ["TECH_HUB_APP_ROOT"]) / "index.html" if os.environ.get("TECH_HUB_APP_ROOT") else ROOT / "index.html"
 LOCAL_PORT = int(os.environ.get("TECH_HUB_BACKEND_PORT", "53971"))
 SERVER_BIND_HOST = os.environ.get("TECH_HUB_BACKEND_HOST", "0.0.0.0")
 if os.environ.get("TECH_HUB_DATA_DIR"):

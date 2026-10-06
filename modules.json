@@ -1,0 +1,26 @@
+{
+  "dsan": {
+    "version": "1.0.1",
+    "minHostVersion": "1.0.1"
+  },
+  "power": {
+    "version": "1.0.1",
+    "minHostVersion": "1.0.1"
+  },
+  "netgear": {
+    "version": "1.0.1",
+    "minHostVersion": "1.0.1"
+  },
+  "record": {
+    "version": "1.0.1",
+    "minHostVersion": "1.0.1"
+  },
+  "ultrix": {
+    "version": "1.0.1",
+    "minHostVersion": "1.0.1"
+  },
+  "rtoo": {
+    "version": "1.0.0",
+    "minHostVersion": "1.0.1"
+  }
+}

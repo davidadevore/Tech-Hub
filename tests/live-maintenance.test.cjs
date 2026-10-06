@@ -6,15 +6,15 @@ test('live settings, encrypted backup/restore and diagnostics work through the h
  const config=loadConfig(dir);config.host='127.0.0.1';config.adminPort=29700;
  for(const [i,d]of definitions.entries())Object.assign(config.services[d.id],{port:29701+i,backendPort:29711+i,enabled:['record','ultrix'].includes(d.id)});
  for(const id of ['record','ultrix']){settings.read(dir,id);fs.symlinkSync(path.resolve(__dirname,'../services',id),path.join(resources,id),'dir');}
- fs.writeFileSync(path.join(dir,'config.json'),JSON.stringify(config));process.env.TECH_HUB_RESOURCES=resources;hub=await startHub({dir,checkUpdates:false});
+ fs.writeFileSync(path.join(dir,'config.json'),JSON.stringify(config));process.env.TECH_HUB_RESOURCES=resources;hub=await startHub({modular:false,dir,checkUpdates:false});
  for(let n=0;n<100&&!hub.status().services.filter(s=>s.enabled).every(s=>s.state==='running');n++)await new Promise(r=>setTimeout(r,100));assert(hub.status().services.filter(s=>s.enabled).every(s=>s.state==='running'));
  const admin='http://127.0.0.1:29700',post=(url,body,headers={})=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
- const record=await fetch('http://127.0.0.1:29705/__hub/settings'),recordCfg=await record.json();recordCfg.pollIntervalMs=3750;
- assert.equal((await post('http://127.0.0.1:29705/__hub/settings',recordCfg,{'If-Match':record.headers.get('etag')})).status,200);
- assert.equal((await fetch('http://127.0.0.1:29705/api/status').then(r=>r.json())).pollIntervalMs,3750);
- const ultrix=await fetch('http://127.0.0.1:29706/__hub/settings'),ultrixCfg=await ultrix.json();ultrixCfg.routers[0].profiles.operator.title='Updated fixture panel';
- assert.equal((await post('http://127.0.0.1:29706/__hub/settings',ultrixCfg,{'If-Match':ultrix.headers.get('etag')})).status,200);
- assert.equal((await fetch('http://127.0.0.1:29706/api/config').then(r=>r.json())).title,'Updated fixture panel');
+ const record=await fetch('http://127.0.0.1:29704/__hub/settings'),recordCfg=await record.json();recordCfg.pollIntervalMs=3750;
+ assert.equal((await post('http://127.0.0.1:29704/__hub/settings',recordCfg,{'If-Match':record.headers.get('etag')})).status,200);
+ assert.equal((await fetch('http://127.0.0.1:29704/api/status').then(r=>r.json())).pollIntervalMs,3750);
+ const ultrix=await fetch('http://127.0.0.1:29705/__hub/settings'),ultrixCfg=await ultrix.json();ultrixCfg.routers[0].profiles.operator.title='Updated fixture panel';
+ assert.equal((await post('http://127.0.0.1:29705/__hub/settings',ultrixCfg,{'If-Match':ultrix.headers.get('etag')})).status,200);
+ assert.equal((await fetch('http://127.0.0.1:29705/api/config').then(r=>r.json())).title,'Updated fixture panel');
  assert(hub.status().services.filter(s=>s.enabled).every(s=>s.state==='running'));
  assert.equal((fs.readFileSync(path.join(dir,'logs/record.log'),'utf8').match(/running with/g)||[]).length,1);
  const diagnostics=await fetch(admin+'/api/diagnostics').then(r=>r.json());assert.equal(diagnostics.services.length,6);assert(!JSON.stringify(diagnostics).includes('Updated fixture panel'));

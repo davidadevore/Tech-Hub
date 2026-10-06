@@ -1,0 +1,11 @@
+{
+  "name": "techhub-rtoo",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "license": "GPL-2.0-only",
+  "dependencies": {
+    "aes70": "2.0.20",
+    "bonjour-service": "1.4.4"
+  }
+}
