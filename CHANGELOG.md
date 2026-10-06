@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1 — 2026-10-06
+
+- Replace the header admin badge with Settings and Connected Devices buttons. Move Local Network Names into Settings, move Updates above Backup & Restore, and remove the dashboard subtitle.
+- Add optional password-protected network administration. Administrator passwords accept 4 or more characters; sessions expire after one hour, sign-in attempts are rate-limited, and changing access or the password revokes remote sessions. Remote access starts disabled.
+- Add an admin-only Connected Devices view showing active browser page IPs, services, session counts, and last activity. Pages check in every 15 seconds and expire after 60 seconds without activity; no network scan is performed.
+
 ## 0.7.0 — 2026-10-06
 
 - Add short LAN names (`dsan.local`, `lux.local`, `pd.local`, `netgear.local`, `record.local`, `router.local`) with a user-entered machine identifier and editable per-service hostnames, including the Tech Hub directory. Accept names with or without `.local` and reject duplicate or invalid hostnames. Advertise enabled services over Bonjour/mDNS, detect reported name conflicts, and withdraw names on disable or shutdown.

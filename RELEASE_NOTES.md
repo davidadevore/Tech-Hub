@@ -1,16 +1,13 @@
-Tech Hub 0.7.0 adds editable local network addresses for every application.
+Tech Hub 0.7.1 adds Settings, optional network administration and Connected Devices.
 
-- Open services with short names: dsan.local, lux.local, pd.local, netgear.local, record.local, and router.local. tech.local provides a directory of enabled apps.
-- Edit each service hostname under Local network names on the master page. Enter dsan1 or dsan1.local; both work. Duplicate and invalid names are rejected.
-- Add an optional machine identifier, such as stage1, to produce dsan1-stage1.local. Give each Tech Hub computer on your network distinct names.
-- Use addresses without port numbers through a shared HTTP port 80 listener. If port 80 is occupied or unavailable, Tech Hub retains hostname-and-port links and shows a retry option. Existing IP-and-port links remain available.
-- The app switcher follows each destination service's hostname. Password checks and local-only administrative controls remain in place.
-- Bonjour/mDNS names follow enabled services and network changes, withdraw on shutdown, and report detected name conflicts. Changes apply live; reopen shared pages using their updated links.
+- Settings replaces the admin badge in the master page header. Local Network Names now lives inside Settings.
+- Allow other computers on your local network to administer Tech Hub using a separate administrator password of 4 or more characters. Remote administration starts disabled.
+- Remote administrators can manage services, passwords, configurations, backups, diagnostics and network names. Sign-in attempts are rate-limited; sessions last one hour. Changing the password or access setting signs out remote administrators.
+- Connected Devices sits to the left of Settings and lists active browser IPs, applications, page counts and last activity. Browser pages check in every 15 seconds and expire after 60 seconds without activity. No network scan is performed; background browsers can suspend activity, and multiple clients can share an IP.
+- Updates now appears directly above Backup & Restore. Removed the dashboard subtitle.
 
-Quit Tech Hub before updating. Existing service settings, passwords and assigned ports are preserved. The new controls appear on the local master page. Companion 1.0.3 remains compatible.
-
-Use explicit http:// addresses on a trusted local network. Clients need mDNS support and access to UDP 5353; port-free links also require TCP 80. VLAN isolation, VPNs and firewall settings may prevent access. HTTPS is not configured. The master administration page remains available only on the host computer.
+Quit Tech Hub before updating. Existing settings, service passwords, hostnames and assigned ports are preserved. Enable remote administration explicitly in Settings and use the displayed admin address. With the shared hostname listener enabled, tech.local/admin redirects to sign-in (custom names and identifiers also apply). These HTTP interfaces are intended for a trusted local network. Companion 1.0.3 remains compatible.
 
 Mac: Apple silicon, macOS 13+; ad-hoc signed, not notarized. Windows: x64, Windows 10 (1809+) or Windows 11; unsigned per-user installer. Both installers bundle their runtimes.
 
-Validation includes automated tests, isolated service fixtures, and a live port-free .local resolution/HTTP check on macOS. Cross-device hostname resolution depends on your network; physical show hardware was not exercised for this release.
+Validated with automated tests, isolated HTTP fixtures, and browser checks of the Settings and Connected Devices dialogs. Physical show hardware was not exercised for this release.

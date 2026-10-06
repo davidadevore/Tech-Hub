@@ -43,6 +43,7 @@ function loadConfig(dir) {
   }
   if (!['0.0.0.0','127.0.0.1'].includes(config.host)) throw Error('host must be 0.0.0.0 or 127.0.0.1');
   config.naming=validateNaming(config.naming);
+  config.remoteAdmin=require('./admin-access.cjs').validate(config.remoteAdmin);
   save(file,config);
   return config;
 }
@@ -58,6 +59,7 @@ function listen(server,port,host) { return new Promise((resolve,reject)=>{server
 function close(server) { server.closeAllConnections(); return new Promise(resolve=>server.close(resolve)); }
 function ips(host) { return host==='127.0.0.1'?[]:[...new Set(Object.values(os.networkInterfaces()).flat().filter(n=>n&&!n.internal&&n.family==='IPv4').map(n=>n.address))]; }
 function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><script src="/__hub/chrome.js" defer></script><link rel="icon" type="image/svg+xml" href="/__hub/favicon.svg"><style>:root{color-scheme:dark}body{background:#071015;color:#f2f7f5;font:16px system-ui;min-height:95vh;margin:0}main{width:min(360px,85vw);margin:8vh auto}main>p:first-child{color:#ff8a1f;font-weight:700;letter-spacing:.15em}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #31505a;font:inherit}input{background:#0c181e;color:#f2f7f5}button{background:#ff8a1f;color:#1b0d02;border-color:#ff8a1f;font-weight:650;cursor:pointer}button:hover{background:#ffa24f}input:focus-visible,button:focus-visible{outline:2px solid #ff8a1f;outline-offset:3px}p{color:#8ca3aa}p[role=alert]{color:#ff7a7a}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
+function adminLogin(error=''){return loginPage('Tech Hub administration',error).replace('<script src="/__hub/chrome.js" defer></script>','').replace('action="/__hub/login"','action="/login"').replace('Service password','Administrator password').replace('Enter this service’s access password.','Enter the administrator password.');}
 async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), launch=true,checkUpdates=launch,advertise=launch,namedPort=80,hostnameOptions={}}={}) {
   const updates=require('./updates.cjs').createUpdateChecker(require('../package.json').version);
   const config=loadConfig(dir), sessions=new Map(), attempts=new Map(), states=new Map(), servers=[],supervisors=new Map();
@@ -66,11 +68,15 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   const changing=new Set();let mutations=0;
   function track(req,res){if(['GET','HEAD'].includes(req.method)||req.url==='/api/backup/restore')return;mutations++;let done=false;const finish=()=>{if(!done){done=true;mutations--;}};res.once('finish',finish);res.once('close',finish);}
   const local=req=>['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)&&['localhost','127.0.0.1','[::1]'].includes(new URL('http://'+req.headers.host).hostname);
+  const adminAccess=require('./admin-access.cjs').createAdminAccess({getConfig:()=>config.remoteAdmin,verify:verifyPassword});
+  const viewers=require('./viewers.cjs').createViewers();
+  const administrator=req=>local(req)||adminAccess.authorized(req);
+  const adminHost=req=>{try{const url=new URL('http://'+req.headers.host);return url.port===String(config.adminPort)&&['127.0.0.1','localhost',...ips(config.host),serviceHostname('master',config.naming.suffix,config.naming.names)].includes(url.hostname);}catch{return false;}};
   const chrome=require('./service-chrome.cjs');
-  const navigation=(req,id)=>({current:id,adminPort:config.adminPort,local:local(req),settings:local(req)&&['record','ultrix'].includes(id),services:services.filter(s=>config.services[s.id].enabled).map(s=>({id:s.id,name:s.name,port:s.port,hostnameURL:hostnames?.info(s.id).hostnameURL,networkURL:ips(config.host)[0]?`http://${ips(config.host)[0]}:${s.port}`:null,protected:!!config.services[s.id].password,state:states.get(s.id)?.state}))});
+  const navigation=(req,id)=>({current:id,adminPort:config.adminPort,local:administrator(req),settings:administrator(req)&&['record','ultrix'].includes(id),services:services.filter(s=>config.services[s.id].enabled).map(s=>({id:s.id,name:s.name,port:s.port,hostnameURL:hostnames?.info(s.id).hostnameURL,networkURL:ips(config.host)[0]?`http://${ips(config.host)[0]}:${s.port}`:null,protected:!!config.services[s.id].password,state:states.get(s.id)?.state}))});
   let discovering=false;
   async function discoverHyperDecks(req,res){
-    if(!local(req)||!sameOrigin(req))return send(res,403,{error:'Discovery is available only on the Tech Hub computer.'});
+    if(!administrator(req)||!sameOrigin(req))return send(res,403,{error:'Discovery is available only on the Tech Hub computer.'});
     if(req.method==='GET')return send(res,200,{suggestions:hyperdeckDiscovery.suggestions()});
     if(req.method!=='POST'||!/^application\/json/.test(req.headers['content-type']||''))return send(res,405,{error:'Use the settings dialog to scan.'});
     if(discovering)return send(res,409,{error:'A scan is already running.'});
@@ -84,7 +90,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
     finally{discovering=false;}
   }
   async function configure(req,res,id){
-    if(!local(req)||!sameOrigin(req))return send(res,403,{error:'Settings are available only on the Tech Hub computer.'});
+    if(!administrator(req)||!sameOrigin(req))return send(res,403,{error:'Settings are available only on the Tech Hub computer.'});
     if(req.method==='GET'){const value=serviceConfig.read(dir,id);res.setHeader('ETag',revision(value));return send(res,200,value);}
     if(req.method!=='POST')return send(res,405,{error:'Method not allowed'});
     if(changing.has(id)||['starting','recovering','stopping'].includes(states.get(id)?.state))return send(res,409,{error:'Wait for this service to finish changing state.'});
@@ -128,13 +134,38 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   }
   const logdir=path.join(dir,'logs'); fs.mkdirSync(logdir,{recursive:true,mode:0o700});
   const invalidate=id=>{for(const [key,s] of sessions) if(s.id===id)sessions.delete(key);for(const response of activeResponses.get(id))response.destroy();};
-  function status() {return {name:'Tech Hub',version:require('../package.json').version,adminPort:config.adminPort,startedAt,naming:{...config.naming,...namedRouter?.state,directory:hostnames?.info('master')},services:services.map(d=>({id:d.id,name:d.name,detail:d.detail,port:d.port,enabled:config.services[d.id].enabled,protected:!!config.services[d.id].password,localURL:`http://127.0.0.1:${d.port}`,urls:ips(config.host).map(ip=>`http://${ip}:${d.port}`),...hostnames?.info(d.id),...states.get(d.id)}))};}
+  function status() {return {name:'Tech Hub',version:require('../package.json').version,adminPort:config.adminPort,startedAt,remoteAdmin:{enabled:config.remoteAdmin.enabled,passwordSet:!!config.remoteAdmin.password,urls:ips(config.host).map(ip=>`http://${ip}:${config.adminPort}`)},naming:{...config.naming,...namedRouter?.state,directory:hostnames?.info('master')},services:services.map(d=>({id:d.id,name:d.name,detail:d.detail,port:d.port,enabled:config.services[d.id].enabled,protected:!!config.services[d.id].password,localURL:`http://127.0.0.1:${d.port}`,urls:ips(config.host).map(ip=>`http://${ip}:${d.port}`),...hostnames?.info(d.id),...states.get(d.id)}))};}
   const diagnostics=require('./diagnostics.cjs').createDiagnostics(()=>services.map(d=>({...d,...states.get(d.id)})));
   for (const d of services) states.set(d.id,{state:'starting',error:null});
   const admin=http.createServer(async(req,res)=>{
     track(req,res);
-    if (![`127.0.0.1:${config.adminPort}`,`localhost:${config.adminPort}`].includes(req.headers.host) || !['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)) return send(res,403,{error:'Admin is available only on this computer.'});
+
     try {
+      if(!adminHost(req)||!sameOrigin(req))return send(res,403,{error:'Use the Tech Hub administration address.'});
+      if(req.url==='/login'&&req.method==='POST'){
+        const result=await adminAccess.login(req,new URLSearchParams(await readBody(req)).get('password'));
+        if(result.cookie){res.writeHead(303,{Location:'/', 'Set-Cookie':result.cookie,'Cache-Control':'no-store'});return res.end();}
+        return send(res,result.status,adminLogin(result.error),'text/html');
+      }
+      if(!administrator(req)){
+        if(!config.remoteAdmin.enabled)return send(res,403,{error:'Admin is available only on this computer.'});
+        if(req.method==='GET'&&['/','/login'].includes(req.url))return send(res,401,adminLogin(),'text/html');
+        return send(res,401,{error:'Administrator sign-in required.'});
+      }
+      if(req.method==='POST'&&req.url==='/logout'){adminAccess.logout(req);for(const d of services)for(const response of activeResponses.get(d.id))if(response.techHubRemoteAdmin)response.destroy();res.writeHead(303,{Location:'/', 'Set-Cookie':'techhub_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});return res.end();}
+      if(req.method==='POST'&&req.url==='/__hub/heartbeat'){viewers.touch(req,'master');return send(res,200,{ok:true});}
+      if(req.method==='GET'&&req.url==='/api/viewers')return send(res,200,{viewers:viewers.list(),expiresAfterSeconds:60});
+      if(req.method==='POST'&&req.url==='/api/admin-access'){
+        if(restorePending)return send(res,409,{error:'Quit and reopen Tech Hub after restoring settings.'});
+        if(!/^application\/json/.test(req.headers['content-type']||''))return send(res,400,{error:'JSON required'});
+        const body=JSON.parse(await readBody(req));
+        if(typeof body.enabled!=='boolean'||typeof body.password!=='string'||body.password.length>256||(body.password&&body.password.length<4))return send(res,400,{error:'Use an administrator password of at least 4 characters.'});
+        const password=body.password?await hashPassword(body.password):config.remoteAdmin.password;
+        const remoteAdmin=require('./admin-access.cjs').validate({enabled:body.enabled,password});
+        backups.snapshot(dir);save(path.join(dir,'config.json'),{...config,remoteAdmin});config.remoteAdmin=remoteAdmin;adminAccess.revoke();
+        for(const d of services)for(const response of activeResponses.get(d.id))if(response.techHubRemoteAdmin)response.destroy();
+        return send(res,200,{ok:true});
+      }
       if(restorePending&&req.method!=='GET')return send(res,409,{error:'Backup restored. Quit and reopen Tech Hub before making changes.'});
       if(chrome.asset(req,res))return;
       if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,navigation(req,'master'));
@@ -160,7 +191,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
           if(config.services[id].enabled===enabled)return send(res,200,{ok:true});
           if(enabled&&launch){const d=services.find(s=>s.id===id),reservation=http.createServer();try{d.backendPort=await assign(reservation,d.backendPort,'127.0.0.1',config.services[id],'backendPort');}finally{if(reservation.listening)await close(reservation);}}
           const next=structuredClone(config);next.services[id].enabled=enabled;save(path.join(dir,'config.json'),next);config.services[id].enabled=enabled;
-          if(!enabled){states.set(id,{state:'stopping',error:null});invalidate(id);await supervisors.get(id)?.stop();states.set(id,{state:'disabled',error:null});}
+          if(!enabled){viewers.remove(id);states.set(id,{state:'stopping',error:null});invalidate(id);await supervisors.get(id)?.stop();states.set(id,{state:'disabled',error:null});}
           else if(supervisors.has(id))supervisors.get(id).start();else states.set(id,{state:launch?'error':'running',error:launch?'Unable to start service. Restart Tech Hub.':null});
           return send(res,200,{ok:true});
         }finally{changing.delete(id);}
@@ -181,10 +212,10 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         backups.snapshot(dir);restorePending=true;
         await Promise.all([...supervisors.values()].map(s=>s.stop()));
         try{backups.restore(dir,restored);}catch(error){restorePending=false;for(const [id,s]of supervisors)if(config.services[id].enabled)s.start();throw error;}
-        for(const d of services){invalidate(d.id);config.services[d.id].enabled=false;states.set(d.id,{state:'disabled',error:null});}
+        adminAccess.revoke();config.remoteAdmin.enabled=false;for(const d of services){viewers.remove(d.id);invalidate(d.id);config.services[d.id].enabled=false;states.set(d.id,{state:'disabled',error:null});}
         return send(res,200,{ok:true,message:'Backup restored. Quit and reopen Tech Hub to use the restored settings.'});
       }
-      if(req.method==='GET'&&req.url==='/api/status')return send(res,200,{...status(),restorePending});
+      if(req.method==='GET'&&req.url==='/api/status')return send(res,200,{...status(),restorePending,localAdmin:local(req),services:status().services.map(s=>({...s,localURL:`http://${new URL('http://'+req.headers.host).hostname}:${s.port}`}))});
       if(req.method==='GET'&&req.url==='/api/updates')return send(res,200,updates.snapshot());
       if(req.method==='POST'&&req.url==='/api/updates/check') {
         if(!sameOrigin(req))return send(res,403,{error:'Use the local admin page.'});
@@ -218,7 +249,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
       send(res,404,{error:'Not found'});
     } catch(error) {send(res,400,{error:error.message});}
   });
-  try {await assign(admin,config.adminPort,'127.0.0.1',config,'adminPort');servers.push(admin);} catch(error) {throw Error(`Master page port ${config.adminPort}: ${error.message}`);}
+  try {await assign(admin,config.adminPort,config.host,config,'adminPort');servers.push(admin);} catch(error) {throw Error(`Master page port ${config.adminPort}: ${error.message}`);}
   for(const d of services) {
     const gateway=http.createServer(async(req,res)=>{
       track(req,res);
@@ -233,7 +264,8 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         if(req.method==='GET'&&['/favicon.ico','/__hub/favicon.svg'].includes(req.url))return send(res,200,fs.readFileSync(path.join(__dirname,`icon-${d.id}.svg`)),'image/svg+xml');
         const cookies=Object.fromEntries((req.headers.cookie||'').split(';').map(x=>x.trim().split('=')));
         const session=sessions.get(cookies['techhub_'+d.id]);
-        const authed=!stored||(session&&session.id===d.id&&session.expires>Date.now());
+        const remoteAdministrator=adminAccess.authorized(req);
+        const authed=remoteAdministrator||!stored||(session&&session.id===d.id&&session.expires>Date.now());
         if(req.url==='/__hub/login'&&req.method==='POST') {
           const key=d.id+':'+req.socket.remoteAddress;
           const recent=attempts.get(key)||{count:0,until:Date.now()+60000};
@@ -245,23 +277,26 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
           const token=crypto.randomBytes(32).toString('hex');sessions.set(token,{id:d.id,expires:Date.now()+12*3600000});attempts.delete(key);
           res.writeHead(303,{'Location':'/','Set-Cookie':`techhub_${d.id}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`,'Cache-Control':'no-store'});res.end();return;
         }
-        if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,{...navigation(req,d.id),settings:!!authed&&local(req)&&['record','ultrix'].includes(d.id),authRequired:!authed,message:!authed?'Session expired or password required. Sign in again.':!config.services[d.id].enabled?'Service off. Choose another app.':states.get(d.id).state!=='running'?'Reconnecting — '+states.get(d.id).state:null});
+        if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,{...navigation(req,d.id),settings:!!authed&&administrator(req)&&['record','ultrix'].includes(d.id),authRequired:!authed,message:!authed?'Session expired or password required. Sign in again.':!config.services[d.id].enabled?'Service off. Choose another app.':states.get(d.id).state!=='running'?'Reconnecting — '+states.get(d.id).state:null});
         if(!authed) return send(res,401,req.url.startsWith('/api/')?{error:'Service password required'}:loginPage(d.name),req.url.startsWith('/api/')?'application/json':'text/html');
         if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,navigation(req,d.id));
         if(req.url==='/__hub/settings'&&['record','ultrix'].includes(d.id))return await configure(req,res,d.id);
         if(req.url==='/__hub/discover-hyperdecks'&&d.id==='record')return await discoverHyperDecks(req,res);
+        if(req.method==='POST'&&req.url==='/__hub/heartbeat'){if(config.services[d.id].enabled)viewers.touch(req,d.id);return send(res,200,{ok:true});}
         if(!config.services[d.id].enabled)return send(res,503,chrome.disabled(d.name),'text/html');
         if(states.get(d.id).state!=='running')return send(res,503,req.url.startsWith('/api/')?{error:'Service reconnecting'}:chrome.disabled(d.name,'Reconnecting. You can choose another app above.','reconnecting'),req.url.startsWith('/api/')?'application/json':'text/html');
         if(req.url.startsWith('/api/update')&&d.id==='power')return send(res,200,{current_version:require('../package.json').version,available:false,error:'Power Monitor is bundled with Tech Hub. Update the complete app from the Tech Hub release page.'});
         if(['POST','PUT','PATCH','DELETE'].includes(req.method)&&['/api/config','/api/devices','/api/devices/layout','/api/devices/ports','/api/color-scheme'].includes(req.url.split('?')[0]))backups.snapshot(dir);
         const headers={...req.headers,host:`127.0.0.1:${d.backendPort}`}; delete headers.cookie;delete headers.authorization;
-        headers['x-techhub-local-client']=['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)?'1':'0';
+        headers['x-techhub-local-client']=administrator(req)?'1':'0';
         headers['accept-encoding']='identity';
         // Preserve only Router Panel's profile session, never another service's cookies.
         if(d.id==='ultrix'&&/^[a-f0-9]+$/.test(cookies.techhub_ultrix_profile||''))headers.cookie=`sid=${cookies.techhub_ultrix_profile}`;
         if(headers.origin)headers.origin=`http://127.0.0.1:${d.backendPort}`;
+        res.techHubRemoteAdmin=remoteAdministrator;
         activeResponses.get(d.id).add(res);
-        const sessionTimer=stored&&session?setTimeout(()=>res.destroy(),Math.max(1,session.expires-Date.now())):null;
+        const expires=remoteAdministrator?adminAccess.expires(req):stored&&session?session.expires:null;
+        const sessionTimer=expires?setTimeout(()=>res.destroy(),Math.max(1,expires-Date.now())):null;
         sessionTimer?.unref();
         res.once('close',()=>{clearTimeout(sessionTimer);activeResponses.get(d.id).delete(res);});
         const upstream=http.request({hostname:'127.0.0.1',port:d.backendPort,path:req.url,method:req.method,headers},response=>{
@@ -309,6 +344,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   if(advertise&&config.host==='0.0.0.0'){
     const namedRoutes=()=>new Map([...(config.naming.portless&&namedRouter?.state.available?[[serviceHostname('master',config.naming.suffix,config.naming.names),'directory']]:[]),...services.filter(s=>gateways.has(s.id)).map(s=>[serviceHostname(s.id,config.naming.suffix,config.naming.names),gateways.get(s.id)])]);
     namedRouter=require('./named-router.cjs').createNamedRouter({port:namedPort,getRoutes:namedRoutes,directory:(req,res)=>{
+      if(req.url==='/admin'&&config.remoteAdmin.enabled){res.writeHead(302,{Location:`http://${serviceHostname('master',config.naming.suffix,config.naming.names)}:${config.adminPort}/`,'Cache-Control':'no-store'});return res.end();}
       if(!sameOrigin(req))return send(res,403,{error:'Cross-origin requests are not allowed.'});
       if(req.method!=='GET'||!['/','/style.css','/favicon.ico','/__hub/favicon.svg'].includes(req.url))return send(res,404,{error:'Not found'});
       if(req.url==='/style.css')return send(res,200,fs.readFileSync(path.join(__dirname,'style.css')),'text/css');
@@ -319,7 +355,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         const link=conflict?(ips(config.host)[0]?`http://${ips(config.host)[0]}:${s.port}`:null):url;
         return `<article class="card ${s.id}"><h2>${s.name}</h2><p>${s.detail}</p>${link?`<a class="open" href="${link}">Open dashboard ↗</a>`:'<p>Network address unavailable</p>'}</article>`;
       }).join('');
-      return send(res,200,`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tech Hub</title><link rel="icon" href="/__hub/favicon.svg"><link rel="stylesheet" href="/style.css"></head><body><header><a class="brand" href="/">Tech Hub</a></header><main><h1>Choose an application.</h1><p class="sub">Enabled services on this Tech Hub. Each app keeps its own access password.</p><section id="services">${cards||'<p>No services are enabled.</p>'}</section></main></body></html>`,'text/html');
+      return send(res,200,`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tech Hub</title><link rel="icon" href="/__hub/favicon.svg"><link rel="stylesheet" href="/style.css"></head><body><header><a class="brand" href="/">Tech Hub</a></header><main><h1>Choose an application.</h1><p class="sub">Enabled services on this Tech Hub. Each app keeps its own access password.</p>${config.remoteAdmin.enabled?'<p><a href="/admin">Administrator sign-in ↗</a></p>':''}<section id="services">${cards||'<p>No services are enabled.</p>'}</section></main></body></html>`,'text/html');
     }});
     if(config.naming.portless)await namedRouter.start();
     hostnames=require('./hostnames.cjs').createHostnames({...hostnameOptions,dir,getSuffix:()=>config.naming.suffix,getNames:()=>config.naming.names,getServices:()=>[

@@ -4,7 +4,7 @@ One desktop application for **D’san Ready**, **Lux Link**, **Power Monitor**, 
 
 ## Downloads
 
-Current desktop release: **0.7.0**. See the [changelog](CHANGELOG.md) for editable local hostnames, optional machine identifiers, and addresses without port numbers.
+Current desktop release: **0.7.1**. See the [changelog](CHANGELOG.md) for Settings, optional network administration, and Connected Devices.
 
 ### Companion module
 
@@ -39,11 +39,19 @@ Requires **macOS 13 or later on an Apple silicon Mac (M1 or later)**. Intel Macs
 
 This initial build is **ad-hoc signed, not Apple Developer ID signed or notarized**. macOS may require **System Settings → Privacy & Security → Open Anyway** on first launch. See [installation details](INSTALL.md).
 
+## Settings and connected devices
+
+Open **Settings** in the master page header to edit Local Network Names or enable **Allow administration from other computers on this network**. Remote administration is off by default. Set a separate administrator password of **at least 4 characters**; leave the password field blank to retain an existing password. Save administration access, then share one of the admin addresses shown there (the assigned master port, normally `http://HOST-IP:8700`). With short names enabled, `http://tech.local/admin` redirects to the administrator sign-in page. Custom directory names and machine identifiers also apply.
+
+Signed-in administrators can manage services, access passwords, configuration, backups, diagnostics and network names. Open service settings from the master page links to retain the administrator session on the same hostname. Sessions last one hour; changing the administrator password or access setting signs out remote administrators. Sign out ends the current browser session. Disabling access takes effect immediately. These HTTP interfaces are for a trusted local network; use a network you control.
+
+**Connected Devices**, to the left of Settings, shows client IP addresses, applications, active page counts and last activity. Browser pages check in every 15 seconds; entries disappear after 60 seconds without activity, or when their service is disabled. This is an activity list, not a network scan: browsers can suspend background pages, clients can share an IP, and non-browser API clients are not automatically counted. This information is visible only to administrators and is held in memory.
+
 ## Dashboard ports
 
-Tech Hub offers short Bonjour/mDNS names: `http://dsan.local`, `http://lux.local`, `http://pd.local`, `http://netgear.local`, `http://record.local`, and `http://router.local`. `http://tech.local` opens a network app directory showing enabled services. Service passwords still apply; the administrative master page stays local-only and opens from the TH menu.
+Tech Hub offers short Bonjour/mDNS names: `http://dsan.local`, `http://lux.local`, `http://pd.local`, `http://netgear.local`, `http://record.local`, and `http://router.local`. `http://tech.local` opens a network app directory showing enabled services. Service passwords still apply; the administrative master page opens from the TH menu, with optional network access configured in Settings.
 
-On the master page, **Local network names → Machine identifier** adds an optional suffix to every name. For example, entering `stage1` produces `dsan-stage1.local`, `tech-stage1.local`, and `pd-stage1.local`. Leave it blank for the shortest names. Under **Service hostnames**, edit each app’s name independently (including the Tech Hub directory). Enter `dsan1` or `dsan1.local`; both produce `dsan1.local` with no machine identifier, or `dsan1-stage1.local` with identifier `stage1`. Names must be distinct within Tech Hub, and each name plus identifier must fit the 63-character DNS label limit. Use a different identifier for each Tech Hub computer on the same network. Identifiers accept up to 32 letters, numbers, and internal hyphens. Saving applies live; existing viewers should reopen the updated links. Name conflicts reported by another mDNS device disable that name and show a warning; choose another identifier or use an IP link. mDNS is not a central name registry, so deliberately assign unique identifiers on shared networks.
+On the master page, **Settings → Local network names → Machine identifier** adds an optional suffix to every name. For example, entering `stage1` produces `dsan-stage1.local`, `tech-stage1.local`, and `pd-stage1.local`. Leave it blank for the shortest names. Under **Service hostnames**, edit each app’s name independently (including the Tech Hub directory). Enter `dsan1` or `dsan1.local`; both produce `dsan1.local` with no machine identifier, or `dsan1-stage1.local` with identifier `stage1`. Names must be distinct within Tech Hub, and each name plus identifier must fit the 63-character DNS label limit. Use a different identifier for each Tech Hub computer on the same network. Identifiers accept up to 32 letters, numbers, and internal hyphens. Saving applies live; existing viewers should reopen the updated links. Name conflicts reported by another mDNS device disable that name and show a warning; choose another identifier or use an IP link. mDNS is not a central name registry, so deliberately assign unique identifiers on shared networks.
 
 **Use addresses without port numbers** enables a shared HTTP listener on TCP port 80. The hostname selects the existing service gateway, preserving its password checks and the client’s actual address. If port 80 is busy or permission is denied, Tech Hub keeps running with hostname-and-port links such as `http://dsan.local:8701`, explains the failure on the master page, and provides a retry button. It does not stop the other application, change firewall rules, or request elevated privileges. The `tech.local` directory is available only when the shared listener is running. Existing IP-and-port links remain available in either mode.
 
@@ -51,7 +59,7 @@ Hostnames work on the same local network where clients support mDNS and multicas
 
 | Application | Default URL on the host computer | Availability |
 | --- | --- | --- |
-| Master page | `http://127.0.0.1:8700` | Admin, this computer only |
+| Master page | `http://127.0.0.1:8700` | Admin, local by default |
 | D’san Ready | `http://127.0.0.1:8701` | Limitimer, PerfectCue, full-screen view at `/full` |
 | Lux Link | `http://127.0.0.1:8702` | Lighting devices, sACN and Art-Net monitoring |
 | Power Monitor | `http://127.0.0.1:8703` | Power devices, phases, services, and alerts |
@@ -65,7 +73,7 @@ Use **Configure switches** on the NETGEAR card to enter the management subnet an
 
 Use **Configure** on Record Monitor to edit its JSON settings. Add entries to `devices`, for example `{"name":"Recorder","type":"hyperdeck","host":"192.168.1.50"}`. Use `kipro` for AJA units. Recording controls default to the host computer only (`controlLocalOnly`); disk formatting is disabled (`allowFormat: false`). Saving restarts only Record Monitor. See its [device options](services/record/README.md).
 
-Use **Configure routers** on Router Panel (formerly Ultrix Panel) to open its settings page. Like the NETGEAR setup page, it opens only on the Tech Hub computer. Save one or more routers, choose the type (**Ross Ultrix / SW-P-08** or **Blackmagic Videohub**), enter the address and port, and choose which router is **active**. Only the active router connects. Each saved router keeps its own levels, sources, destinations, categories, name overrides and access profiles. Switching the active router reconnects the panel with that router's setup. A blank address keeps a router disconnected. A Videohub has one level. Categories show a live preview of how the active router's names will be grouped. Existing Ultrix Panel settings are upgraded to one saved router automatically. See the [Router Panel configuration guide](services/ultrix/README.md). Facility configuration and exported router names are not included in public downloads.
+Use **Configure routers** on Router Panel (formerly Ultrix Panel) to open its settings page. Like the NETGEAR setup page, it opens on the Tech Hub computer or for a signed-in network administrator. Save one or more routers, choose the type (**Ross Ultrix / SW-P-08** or **Blackmagic Videohub**), enter the address and port, and choose which router is **active**. Only the active router connects. Each saved router keeps its own levels, sources, destinations, categories, name overrides and access profiles. Switching the active router reconnects the panel with that router's setup. A blank address keeps a router disconnected. A Videohub has one level. Categories show a live preview of how the active router's names will be grouped. Existing Ultrix Panel settings are upgraded to one saved router automatically. See the [Router Panel configuration guide](services/ultrix/README.md). Facility configuration and exported router names are not included in public downloads.
 
 All six services use the same port-conflict avoidance, password gates, logs, and individual restart controls. Existing Tech Hub ports and passwords survive upgrades. Power Monitor runs without a separate Windows tray icon when launched by Tech Hub; the standalone Power Monitor app retains its own tray.
 
@@ -93,7 +101,7 @@ Single-IP inspection checks TCP ports 21, 22, 23, 53, 80, 81, 443, 502, 8080, 80
 
 ## Access control
 
-The master page listens only on loopback and validates the request host. It cannot be opened by other computers on the LAN.
+The master page validates the request host and denies network administration by default. When network administration is enabled in Settings, remote requests require an administrator session. The admin listener follows the configured bind address; disabling remote administration denies network access immediately.
 
 Each service has an optional, independent password, configured using **Set password** on its master-page card. Use different passwords for different crews. Password changes sign out existing viewers of that service. Passwords are stored as salted scrypt hashes, and sessions expire after 12 hours or when Tech Hub exits. All service pages and APIs pass through that service’s access gate.
 
@@ -103,7 +111,7 @@ The underlying servers listen only on `127.0.0.1` (default ports `18701–18706`
 
 ## Data, updates, and troubleshooting
 
-Use the dropdown at the top left of any service dashboard to switch directly to another enabled app. When opened through a `.local` name, it uses the destination app’s own hostname and omits port 80. IP and localhost views keep using the assigned service ports. Password-protected apps still require their own password. The master page appears in the switcher only on the Tech Hub computer; D’san's full-screen presentation view hides the shared header.
+Use the dropdown at the top left of any service dashboard to switch directly to another enabled app. When opened through a `.local` name, it uses the destination app’s own hostname and omits port 80. IP and localhost views keep using the assigned service ports. Password-protected apps still require their own password. Signed-in administrators keep the current hostname when switching apps so their administrator session remains available. The master page appears in the switcher for local and signed-in remote administrators; D’san's full-screen presentation view hides the shared header.
 
 The master page's **Service enabled** switches stop and start individual apps. Disabled apps retain their configuration and disappear from the dropdown; this choice is saved for the next launch. Their public gateway stays available to show an “off” page, but their monitoring/control process is stopped.
 
