@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.2 — 2026-10-06
 
 - Move the connection-status and version bar directly below the page footer.
 

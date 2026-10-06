@@ -4,7 +4,7 @@ One desktop application for **D’san Ready**, **Power Monitor**, **NETGEAR AV S
 
 ## Downloads
 
-Version **1.0.1** adds universal module packages and a shared host runtime. The current installer labels the library “App Library”; “Module Library” and the new update controls are prepared for the next build. Lux Link is paused; its saved settings are retained. See the [changelog](CHANGELOG.md).
+Version **1.0.2** adds Module Library update controls, independent module version tracking, and a connection-status bar below the footer. Universal packages and the shared host runtime remain supported. Lux Link is paused; its saved settings are retained. See the [changelog](CHANGELOG.md).
 
 ### Full w/all modules
 
@@ -37,9 +37,9 @@ Upgrading from 0.x retains service settings, passwords, and ports. The Host inst
 
 ### Module versions and updates
 
-Each module package includes its own `version` and `minHostVersion` in `techhub-app.json`. In the next host build, **Module Library → Check for updates** shows installed and catalog versions, the last successful check, and updates requiring a newer host. Use **Update** for one module or **Update all** for compatible official updates. Checking does not install anything. Unofficial modules are updated by importing a newer package from their developer.
+Each module package includes its own `version` and `minHostVersion` in `techhub-app.json`. **Module Library → Check for updates** shows installed and catalog versions, the last successful check, and updates requiring a newer host. Use **Update** for one module or **Update all** for compatible official updates. Checking does not install anything. Unofficial modules are updated by importing a newer package from their developer.
 
-The current v1.0.1 installer calls this **App Library → Refresh catalog**; it already supports individual updates. The renamed controls are pending the next installer build. Host updates remain separate. D’san and Power Monitor native engine changes still require a host update.
+Host updates remain separate. D’san and Power Monitor native engine changes still require a host update.
 
 ### Universal modules and shared runtime
 
