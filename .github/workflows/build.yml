@@ -106,4 +106,11 @@ jobs:
       - name: Publish installers together
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" installers/* --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file RELEASE_NOTES.md --verify-tag
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft > /tmp/techhub-release-draft; then
+            test "$(cat /tmp/techhub-release-draft)" = true || { echo 'Refusing to overwrite a published release'; exit 1; }
+            gh release upload "$GITHUB_REF_NAME" installers/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" installers/* --draft --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file RELEASE_NOTES.md --verify-tag
+          fi
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file RELEASE_NOTES.md

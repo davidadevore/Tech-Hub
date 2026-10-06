@@ -68,7 +68,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   const library=modular?require('./app-library.cjs').createLibrary({dir,hostVersion:require('../package.json').version,catalogPath:path.join(resources,'catalog.json'),...libraryOptions,beforeChange:async id=>{await supervisors.get(id)?.stop();if(activeResponses.has(id))invalidate(id);},afterChange:async id=>{
     const installed=library.read(id);if(!installed){states.set(id,{state:'uninstalled',error:null});viewers.remove(id);return;}
     if(!supervisors.has(id)){return;}
-    if(config.services[id].enabled){supervisors.get(id).start();for(let i=0;i<110;i++){if(states.get(id)?.state==='running')return;if(states.get(id)?.state==='error')break;await new Promise(r=>setTimeout(r,300));}throw Error('App did not become healthy. Previous version restored.');}
+    if(config.services[id].enabled){supervisors.get(id).start();for(let i=0;i<110;i++){if(stopping)throw Error('Tech Hub is shutting down');if(states.get(id)?.state==='running')return;if(states.get(id)?.state==='error')break;await new Promise(r=>setTimeout(r,300));}throw Error('App did not become healthy. Previous version restored.');}
     states.set(id,{state:'disabled',error:null});
   }}):null;
   const definitions=[...builtins];for(const app of library?.installed()||[])if(!definitions.some(d=>d.id===app.manifest.id))definitions.push({id:app.manifest.id,name:app.manifest.name,detail:app.manifest.description,port:8800+definitions.length,backendPort:18800+definitions.length});
@@ -408,9 +408,10 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
       ...services.filter(s=>gateways.has(s.id)).map(s=>({...s,port:namedRouter.state.available?namedRouter.state.port:s.port,enabled:config.services[s.id].enabled&&isInstalled(s.id)}))
     ]});
   }
-  if(library){await library.seed(seedDir||path.join(resources,'offline-apps'));void library.refresh();}
+  // Let the desktop host attach its shutdown handlers before first-launch unpacking starts.
+  const seedStart=library?setImmediate(()=>{library.seed(seedDir||path.join(resources,'offline-apps')).then(()=>library.refresh()).catch(error=>console.error('Offline app setup: '+error.message));}):null;
   if(checkUpdates)void updates.check();
-  async function stop(){if(stopping)return;stopping=true;updates.stop();await library?.stop();clearInterval(cleanup);await hostnames?.stop();await namedRouter?.stop();await Promise.all([...supervisors.values()].map(s=>s.stop()));await Promise.all(servers.map(close));}
+  async function stop(){if(stopping)return;stopping=true;clearImmediate(seedStart);updates.stop();await library?.stop();clearInterval(cleanup);await hostnames?.stop();await namedRouter?.stop();await Promise.all([...supervisors.values()].map(s=>s.stop()));await Promise.all(servers.map(close));}
   return {status,stop,config};
 }
 if(require.main===module)startHub().then(hub=>{console.log(`TECH_HUB_READY http://127.0.0.1:${hub.config.adminPort}`);if(process.env.TECH_HUB_STDIN_CONTROL==='1'){const lines=require('node:readline').createInterface({input:process.stdin});lines.on('line',line=>{if(line==='shutdown')hub.stop().then(()=>process.exit(0));});lines.on('close',()=>hub.stop().then(()=>process.exit(0)));}for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>hub.stop().then(()=>process.exit(0)));if(process.env.TECH_HUB_PARENT_PID){const parent=Number(process.env.TECH_HUB_PARENT_PID);setInterval(()=>{try{process.kill(parent,0);}catch{hub.stop().then(()=>process.exit(0));}},2000).unref();}}).catch(error=>{console.error(error.message);process.exitCode=1;});
