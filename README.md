@@ -36,6 +36,12 @@ Open **Module Library** in the master page to install individual modules, **Inst
 
 Upgrading from 0.x retains service settings, passwords, and ports. The Host installer offers **Install previously enabled modules**; the Full installer includes all modules and respects saved enabled/disabled settings. Once a module is installed, its service slider controls whether it runs and appears in shared navigation. Module updates and rollback are separate from host updates. Uninstall removes module files while retaining settings. A newly added third-party module requires reopening Tech Hub once; the five official modules activate immediately.
 
+### Browse and submit modules
+
+The next host build adds **Browse modules** inside Module Library: search by name, purpose or developer and filter available, installed or updatable modules. **Check for updates** refreshes the reviewed catalog, including newly approved modules. Choose **Install** on a module card; reopen Tech Hub after installing a new module ID on current hosts. Search/filter controls are not yet in the published v1.0.2 installer.
+
+Developers: [Submit a module](https://github.com/horner516/Tech-Hub/issues/new?template=module-submission.yml) · [Submission and review process](sdk/SUBMITTING.md). Approved modules can be published in a catalog-only release without rebuilding desktop installers. Local ZIP installation remains available for testing and private modules.
+
 ### Module versions and updates
 
 Each module package includes its own `version` and `minHostVersion` in `techhub-app.json`. **Module Library → Check for updates** shows installed and catalog versions, the last successful check, and updates requiring a newer host. Use **Update** for one module or **Update all** for compatible official updates. Checking does not install anything. Unofficial modules are updated by importing a newer package from their developer.

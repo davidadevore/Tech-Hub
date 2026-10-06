@@ -1,0 +1,82 @@
+name: Submit a Tech Hub module
+description: Submit a new module or module update for catalog review.
+title: "[Module submission] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read the [submission guide](https://github.com/horner516/Tech-Hub/blob/main/sdk/SUBMITTING.md) first. Submission does not automatically publish or run your code. Do not include credentials, real device addresses, or private logs.
+  - type: input
+    id: module
+    attributes:
+      label: Module name, stable ID, and version
+      placeholder: "Example Meter · example-meter · 1.0.0"
+    validations:
+      required: true
+  - type: textarea
+    id: purpose
+    attributes:
+      label: Purpose and supported devices
+      description: Describe what it does, who it helps, and whether it monitors or controls equipment.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Public source repository and exact commit or tag
+    validations:
+      required: true
+  - type: input
+    id: package
+    attributes:
+      label: Universal module ZIP release URL and SHA-256
+      description: Provide a versioned release asset, not a moving branch archive.
+    validations:
+      required: true
+  - type: input
+    id: compatibility
+    attributes:
+      label: Minimum Tech Hub version
+    validations:
+      required: true
+  - type: textarea
+    id: licenses
+    attributes:
+      label: License and dependency notices
+      description: Identify the module license, dependency licenses, and redistribution permissions.
+    validations:
+      required: true
+  - type: textarea
+    id: access
+    attributes:
+      label: Network access, device commands, and stored data
+      description: List protocols/ports, discovery behavior, settings, credentials, and any destructive actions. Explain administrator checks.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Test results and screenshots
+      description: Include Mac and Windows results, mobile layout, simulated-device tests, disconnect/reconnect, settings persistence, and hardware tested. State untested cases explicitly.
+    validations:
+      required: true
+  - type: input
+    id: maintainer
+    attributes:
+      label: Maintainer and support link
+      description: GitHub username and issue tracker; no private contact details required.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Submission checklist
+      options:
+        - label: I have permission to distribute this module and its dependencies under the stated licenses.
+          required: true
+        - label: The package contains no credentials, private logs, bundled runtime executables, or native add-ons.
+          required: true
+        - label: I tested installation through Tech Hub and documented any untested hardware/platforms.
+          required: true
+        - label: I understand that catalog inclusion requires maintainer review and is not automatic.
+          required: true

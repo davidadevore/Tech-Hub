@@ -65,3 +65,7 @@ Package the module with `sdk/package.cjs`, then import the ZIP from Module Libra
 - Use the same package bytes on Mac and Windows; check case-sensitive imports and pure-JavaScript dependency portability.
 - Test actual failure behavior with fixtures. Host driver selection tests do not prove compatibility with physical hardware.
 - Preserve user settings outside the package and verify upgrade/rollback compatibility.
+
+## Prepare a catalog submission
+
+Follow [SUBMITTING.md](SUBMITTING.md). Ask AI tools to prepare a manifest/package consistency check, dependency/license inventory, test report with explicit untested cases, screenshots and source/package checksums. Review these outputs before submitting. AI-generated claims of compatibility or licensing do not replace evidence or maintainer review. Never place credentials or private device information in the public submission.

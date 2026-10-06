@@ -87,21 +87,25 @@ $('#openDevices').onclick=()=>{$('#devicesDialog').showModal();refreshDevices();
 window.addEventListener('beforeunload',e=>{if(namingDirty||adminAccessDirty){e.preventDefault();e.returnValue='';}});
 
 let libraryState=null,librarySignature='',librarySelection=new Set();
-async function refreshLibrary(){
+async function refreshLibrary(localOnly=false){
  try{
-  const r=await fetch('/api/apps');if(!r.ok)throw Error('Unable to read Module Library');
-  const data=await r.json();libraryState=data;
+  let data=libraryState;if(!localOnly||!data){const r=await fetch('/api/apps');if(!r.ok)throw Error('Unable to read Module Library');data=await r.json();libraryState=data;}
   const updateText=data.updateCount?`${data.updateCount} module update${data.updateCount===1?'':'s'} available`:'No module updates in the current catalog';
   $('#libraryStatus').textContent=data.busy?'Installing or changing modules… Keep Tech Hub open.':data.refreshing?'Checking for module updates…':data.error?`Update check failed: ${data.error}. Showing the saved catalog.`:`${updateText}. ${data.checkedAt?'Last checked '+new Date(data.checkedAt).toLocaleString(): 'Check for updates to refresh the catalog.'}`;
   for(const id of ['refreshLibrary','installSelected','installAll','installPrevious','importApps','reviewLocalApp'])$('#'+id).disabled=!!data.busy||!!data.refreshing;
   $('#updateAll').disabled=!!data.busy||!!data.refreshing||!data.readyUpdateCount;
   $('#updateAll').textContent=data.readyUpdateCount?`Update all (${data.readyUpdateCount})`:'Update all';
   $('#installPrevious').hidden=!data.recommended?.some(id=>data.apps.some(a=>a.id===id&&!a.installedVersion));
-  const sig=JSON.stringify(data);if(sig===librarySignature)return;librarySignature=sig;$('#libraryApps').replaceChildren();
-  for(const a of data.apps){
+  const query=$('#moduleSearch').value.trim().toLocaleLowerCase(),filter=$('#moduleFilter').value;
+  const visible=data.apps.filter(a=>[a.name,a.description,a.id,a.developer||''].join(' ').toLocaleLowerCase().includes(query)&&(filter==='all'||filter==='available'&&!a.installedVersion&&!a.unlisted||filter==='installed'&&a.installedVersion||filter==='updates'&&a.updateAvailable));
+  $('#moduleResults').textContent=`${visible.length} of ${data.apps.length} modules · ${librarySelection.size} selected`;
+  const sig=JSON.stringify([data,query,filter]);if(sig===librarySignature)return;librarySignature=sig;$('#libraryApps').replaceChildren();
+  for(const a of visible){
    const card=node('article',undefined,'libraryCard'),label=node('label',undefined,'librarySelect'),choice=node('input');
-   choice.type='checkbox';choice.checked=librarySelection.has(a.id);choice.disabled=!a.compatible||data.busy||a.unofficial||a.unlisted;choice.onchange=()=>choice.checked?librarySelection.add(a.id):librarySelection.delete(a.id);
-   label.append(choice,node('strong',a.name));card.append(label,node('p',a.unofficial?'Unofficial · locally installed':'Official catalog','badge'),node('p',a.description));
+   choice.type='checkbox';choice.checked=librarySelection.has(a.id);choice.disabled=!a.compatible||data.busy||a.unofficial||a.unlisted;choice.onchange=()=>{choice.checked?librarySelection.add(a.id):librarySelection.delete(a.id);$('#moduleResults').textContent=`${visible.length} of ${data.apps.length} modules · ${librarySelection.size} selected`;};
+   label.append(choice,node('strong',a.name));card.append(label,node('p',a.unofficial?'Unofficial · locally installed':a.unlisted?'Not in current catalog':'Reviewed catalog','badge'),node('p',a.description));
+   if(a.developer)card.append(node('p','Developer: '+a.developer,'muted'));
+   if(a.sourceUrl&&/^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+(?:\/.*)?$/.test(a.sourceUrl)){const link=node('a','Source & documentation ↗');link.href=a.sourceUrl;link.target='_blank';link.rel='noreferrer';card.append(link);}
    card.append(node('p',a.installedVersion?'Installed: v'+a.installedVersion:'Not installed'));
    if(a.unofficial)card.append(node('p','Updates: import a newer package from its developer.','muted'));
    else if(a.unlisted)card.append(node('p','Not listed in the current catalog.','muted'));
@@ -114,10 +118,12 @@ async function refreshLibrary(){
    for(const [action,title,show]of [['install',a.installedVersion?'Update':'Install',!a.unofficial&&!a.unlisted&&(!a.installedVersion||a.updateAvailable)],['rollback','Roll back',a.rollback],['uninstall','Uninstall',a.installedVersion]])if(show){const b=node('button',title);b.disabled=data.busy||data.refreshing||(action==='install'&&!a.compatible);b.onclick=()=>appAction([a.id],action);actions.append(b);}
    card.append(actions);$('#libraryApps').append(card);
   }
+  if(data.apps.length&&!visible.length)$('#libraryApps').append(node('p','No matching modules. Change the search or filter.'));
   if(!data.apps.length)$('#libraryApps').append(node('p','No catalog is available yet. Connect to the internet and check for updates, or install Tech Hub Full.'));
  }catch(e){$('#libraryStatus').textContent=e.message;}
 }
 async function appAction(ids,action='install'){if(!ids.length){$('#libraryError').textContent='Select at least one compatible module.';return;}if(action==='uninstall'&&!confirm('Uninstall the selected module? Its saved settings will be retained.'))return;$('#libraryError').textContent='';try{await apiPost('/api/apps/action',{ids,action});await refreshLibrary();await refresh();}catch(e){$('#libraryError').textContent=e.message;}}
+$('#moduleSearch').oninput=()=>refreshLibrary(true);$('#moduleFilter').onchange=()=>refreshLibrary(true);
 $('#openLibrary').onclick=()=>{$('#libraryDialog').showModal();refreshLibrary();};$('#closeLibrary').onclick=()=>$('#libraryDialog').close();$('#refreshLibrary').onclick=async()=>{try{await apiPost('/api/apps/refresh',{});await refreshLibrary();}catch(e){$('#libraryError').textContent=e.message;}};
 $('#updateAll').onclick=()=>appAction((libraryState?.apps||[]).filter(a=>a.canUpdate&&!a.unofficial).map(a=>a.id));
 $('#installSelected').onclick=()=>appAction([...librarySelection].filter(id=>libraryState?.apps.some(a=>a.id===id&&!a.unlisted&&!a.unofficial&&a.compatible)));$('#installAll').onclick=()=>appAction((libraryState?.apps||[]).filter(a=>a.compatible&&!a.unlisted&&!a.unofficial).map(a=>a.id));$('#installPrevious').onclick=()=>appAction((libraryState?.recommended||[]).filter(id=>libraryState.apps.some(a=>a.id===id&&a.compatible)));

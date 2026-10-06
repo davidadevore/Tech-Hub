@@ -22,7 +22,7 @@ try{for(const [id,name,description,runtime,entry,accent]of specs){
  else copyTree(path.join(resources,id),path.join(dir,id));
  const manifest={schemaVersion:1,id,name,description,version,minHostVersion,runtime,...(runtime==='shared'?{engine:id}:id==='rtoo'?{runtimeAPI:1}:{}),entry,accent,permissions:['network','data-files',...(['dsan','record','ultrix'].includes(id)?['device-control']:[])],platforms:['universal']};
  fs.writeFileSync(path.join(dir,'techhub-app.json'),JSON.stringify(manifest,null,2));const filename=`techhub-app-${id}-${version}-universal.zip`,dest=path.join(output,filename);pack(dir,dest);const bytes=fs.readFileSync(dest);
- catalog.apps.push({id,name,description,version,minHostVersion,permissions:manifest.permissions,packages:{universal:{url:`https://github.com/horner516/Tech-Hub/releases/download/v${releaseVersion}/${filename}`,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),size:bytes.length}}});
+ catalog.apps.push({id,name,description,version,minHostVersion,developer:'Tech Hub',sourceUrl:`https://github.com/horner516/Tech-Hub/tree/main/services/${id}`,permissions:manifest.permissions,packages:{universal:{url:`https://github.com/horner516/Tech-Hub/releases/download/v${releaseVersion}/${filename}`,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),size:bytes.length}}});
  }
  fs.writeFileSync(path.join(output,'catalog.json'),JSON.stringify(catalog,null,2));
  fs.copyFileSync(path.join(output,'catalog.json'),path.resolve('dist/tech-hub-catalog.json'));

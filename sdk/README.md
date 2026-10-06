@@ -31,3 +31,7 @@ Every module carries its own semantic `version`, independent of Tech Hub. Increm
 Tech Hub compares installed and catalog versions. Checking is read-only; administrators choose updates. A module requiring a newer host is shown but excluded from Update all. Unofficial modules require a developer-provided ZIP and are never automatically replaced from the official catalog.
 
 The on-disk filename `techhub-app.json`, `/api/apps` endpoints, archive filenames and existing data directories retain their original names for compatibility. “Module” is the product and SDK terminology.
+
+## Submit for catalog inclusion
+
+Use the [module submission form](https://github.com/horner516/Tech-Hub/issues/new?template=module-submission.yml) and follow the [submission and review process](SUBMITTING.md). Include the exact source commit, universal package, checksum, license, support link and test evidence. Inclusion requires maintainer review. Catalog-only releases let approved new modules appear without a host installer update.
