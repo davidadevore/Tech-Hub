@@ -7,3 +7,6 @@ These applications run as separate local services under Tech Hub's supervisor.
 - **Router Panel** (formerly Ultrix Panel) — supplied by the Tech Hub owner. Original source is preserved in `services/ultrix/`, with managed ports and disconnected startup until a router is configured. Blackmagic Videohub support implements Blackmagic Design's published Videohub Ethernet Protocol; no Blackmagic code is included. Facility configuration and exported router data are not distributed.
 
 NETGEAR's runtime dependencies retain their own licenses in their package directories. Its dashboard is built with Next.js and React. Source distributions retain the dependency lockfiles needed to rebuild it.
+# LAN hostname discovery
+
+Tech Hub bundles [bonjour-service](https://github.com/onlxltd/bonjour-service) (MIT) and its dependencies for Bonjour/mDNS service advertisements. Dependency license files are included alongside the bundled modules.

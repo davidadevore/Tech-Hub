@@ -1,15 +1,16 @@
-Tech Hub 0.6.0 merges davidadevore’s contributions and adds clearer service controls.
+Tech Hub 0.7.0 adds editable local network addresses for every application.
 
-- Router Panel (formerly Ultrix Panel) now supports Blackmagic Videohub over TCP 9990 alongside Ross Ultrix / SW-P-08.
-- Save multiple routers and select one active router. Each retains its own levels, sources, destinations, categories and profiles. Existing single-router settings migrate automatically.
-- Configure routers on the new local-only settings page, with live category previews. Revert recalls the previous route on changed levels, subject to profile permissions.
-- Find HyperDecks from Record Monitor settings by scanning one private IP or a /24 or /23 range. Discovery reads TCP 9993 greetings without sending recorder commands. Add results explicitly, then save settings. AJA Ki Pro devices still require manual entry.
-- Select NETGEAR SNMPv3 security levels, including authentication without encryption. Trunk ports have clearer indicators and tagged-VLAN details; VLAN assignment remains read-only.
-- Improved D’san full-screen clock fitting and centered the clock when PerfectCue is disabled.
-- Service enabled/disabled controls now use visible slider switches, with keyboard focus and reduced-motion support.
+- Open services with short names: dsan.local, lux.local, pd.local, netgear.local, record.local, and router.local. tech.local provides a directory of enabled apps.
+- Edit each service hostname under Local network names on the master page. Enter dsan1 or dsan1.local; both work. Duplicate and invalid names are rejected.
+- Add an optional machine identifier, such as stage1, to produce dsan1-stage1.local. Give each Tech Hub computer on your network distinct names.
+- Use addresses without port numbers through a shared HTTP port 80 listener. If port 80 is occupied or unavailable, Tech Hub retains hostname-and-port links and shows a retry option. Existing IP-and-port links remain available.
+- The app switcher follows each destination service's hostname. Password checks and local-only administrative controls remain in place.
+- Bonjour/mDNS names follow enabled services and network changes, withdraw on shutdown, and report detected name conflicts. Changes apply live; reopen shared pages using their updated links.
 
-Quit Tech Hub before updating. Settings, passwords and assigned ports are preserved. Router Panel retains the existing ultrix service identity and default port 8706. Companion 1.0.3 remains compatible.
+Quit Tech Hub before updating. Existing service settings, passwords and assigned ports are preserved. The new controls appear on the local master page. Companion 1.0.3 remains compatible.
+
+Use explicit http:// addresses on a trusted local network. Clients need mDNS support and access to UDP 5353; port-free links also require TCP 80. VLAN isolation, VPNs and firewall settings may prevent access. HTTPS is not configured. The master administration page remains available only on the host computer.
 
 Mac: Apple silicon, macOS 13+; ad-hoc signed, not notarized. Windows: x64, Windows 10 (1809+) or Windows 11; unsigned per-user installer. Both installers bundle their runtimes.
 
-Validation uses automated tests, simulated routers and disconnected service checks. Physical Videohub, HyperDeck, AJA and NETGEAR hardware were not exercised for this release. Thanks to davidadevore for the fork contributions.
+Validation includes automated tests, isolated service fixtures, and a live port-free .local resolution/HTTP check on macOS. Cross-device hostname resolution depends on your network; physical show hardware was not exercised for this release.

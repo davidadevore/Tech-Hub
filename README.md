@@ -4,7 +4,7 @@ One desktop application for **D’san Ready**, **Lux Link**, **Power Monitor**, 
 
 ## Downloads
 
-Current desktop release: **0.6.0**. See the [changelog](CHANGELOG.md) for Router Panel/Videohub support, HyperDeck discovery, NETGEAR improvements, and service slider switches.
+Current desktop release: **0.7.0**. See the [changelog](CHANGELOG.md) for editable local hostnames, optional machine identifiers, and addresses without port numbers.
 
 ### Companion module
 
@@ -40,6 +40,14 @@ Requires **macOS 13 or later on an Apple silicon Mac (M1 or later)**. Intel Macs
 This initial build is **ad-hoc signed, not Apple Developer ID signed or notarized**. macOS may require **System Settings → Privacy & Security → Open Anyway** on first launch. See [installation details](INSTALL.md).
 
 ## Dashboard ports
+
+Tech Hub offers short Bonjour/mDNS names: `http://dsan.local`, `http://lux.local`, `http://pd.local`, `http://netgear.local`, `http://record.local`, and `http://router.local`. `http://tech.local` opens a network app directory showing enabled services. Service passwords still apply; the administrative master page stays local-only and opens from the TH menu.
+
+On the master page, **Local network names → Machine identifier** adds an optional suffix to every name. For example, entering `stage1` produces `dsan-stage1.local`, `tech-stage1.local`, and `pd-stage1.local`. Leave it blank for the shortest names. Under **Service hostnames**, edit each app’s name independently (including the Tech Hub directory). Enter `dsan1` or `dsan1.local`; both produce `dsan1.local` with no machine identifier, or `dsan1-stage1.local` with identifier `stage1`. Names must be distinct within Tech Hub, and each name plus identifier must fit the 63-character DNS label limit. Use a different identifier for each Tech Hub computer on the same network. Identifiers accept up to 32 letters, numbers, and internal hyphens. Saving applies live; existing viewers should reopen the updated links. Name conflicts reported by another mDNS device disable that name and show a warning; choose another identifier or use an IP link. mDNS is not a central name registry, so deliberately assign unique identifiers on shared networks.
+
+**Use addresses without port numbers** enables a shared HTTP listener on TCP port 80. The hostname selects the existing service gateway, preserving its password checks and the client’s actual address. If port 80 is busy or permission is denied, Tech Hub keeps running with hostname-and-port links such as `http://dsan.local:8701`, explains the failure on the master page, and provides a retry button. It does not stop the other application, change firewall rules, or request elevated privileges. The `tech.local` directory is available only when the shared listener is running. Existing IP-and-port links remain available in either mode.
+
+Hostnames work on the same local network where clients support mDNS and multicast UDP 5353 is allowed; TCP 80 must also be reachable for port-free links. VLAN boundaries, guest Wi-Fi isolation, VPNs, and some Windows configurations can prevent resolution. Names are withdrawn when a service is disabled or Tech Hub quits; address changes are refreshed automatically. The chosen identifier is saved in configuration backups—change it after restoring onto a second computer. Use explicit `http://` links; HTTPS is not configured.
 
 | Application | Default URL on the host computer | Availability |
 | --- | --- | --- |
@@ -95,7 +103,7 @@ The underlying servers listen only on `127.0.0.1` (default ports `18701–18706`
 
 ## Data, updates, and troubleshooting
 
-Use the dropdown at the top left of any service dashboard to switch directly to another enabled app. It keeps the current server hostname and uses each service's actual assigned port. Password-protected apps still require their own password. The master page appears in the switcher only on the Tech Hub computer; D’san's full-screen presentation view hides the shared header.
+Use the dropdown at the top left of any service dashboard to switch directly to another enabled app. When opened through a `.local` name, it uses the destination app’s own hostname and omits port 80. IP and localhost views keep using the assigned service ports. Password-protected apps still require their own password. The master page appears in the switcher only on the Tech Hub computer; D’san's full-screen presentation view hides the shared header.
 
 The master page's **Service enabled** switches stop and start individual apps. Disabled apps retain their configuration and disappear from the dropdown; this choice is saved for the next launch. Their public gateway stays available to show an “off” page, but their monitoring/control process is stopped.
 
@@ -126,6 +134,7 @@ On an Apple silicon Mac with Xcode Command Line Tools, Node.js 22 or later, Go 1
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-build.txt
+pnpm install --frozen-lockfile
 cd services/lux
 pnpm install --frozen-lockfile
 cd ../..
@@ -148,6 +157,7 @@ On Windows x64, install Node.js 24, Go 1.26, Python 3.12, .NET SDK 10, pnpm 11.1
 
 ```powershell
 python -m pip install -r requirements-build.txt
+pnpm install --frozen-lockfile
 pnpm --dir services/lux install --frozen-lockfile
 pnpm --dir services/netgear install --frozen-lockfile
 ./scripts/build-windows.ps1

@@ -9,6 +9,7 @@ const {supervise} = require('./supervisor.cjs');
 const serviceConfig = require('./service-config.cjs');
 const hyperdeckDiscovery = require('./hyperdeck-discovery.cjs');
 const backups=require('./backups.cjs');
+const {serviceHostname,validateNaming}=require('./hostnames.cjs');
 const revision=value=>'"'+crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex')+'"';
 const {promisify} = require('node:util');
 const scrypt = promisify(crypto.scrypt);
@@ -41,6 +42,7 @@ function loadConfig(dir) {
     used.add(port);
   }
   if (!['0.0.0.0','127.0.0.1'].includes(config.host)) throw Error('host must be 0.0.0.0 or 127.0.0.1');
+  config.naming=validateNaming(config.naming);
   save(file,config);
   return config;
 }
@@ -56,15 +58,16 @@ function listen(server,port,host) { return new Promise((resolve,reject)=>{server
 function close(server) { server.closeAllConnections(); return new Promise(resolve=>server.close(resolve)); }
 function ips(host) { return host==='127.0.0.1'?[]:[...new Set(Object.values(os.networkInterfaces()).flat().filter(n=>n&&!n.internal&&n.family==='IPv4').map(n=>n.address))]; }
 function loginPage(name,error='') { return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${name} · Tech Hub</title><script src="/__hub/chrome.js" defer></script><link rel="icon" type="image/svg+xml" href="/__hub/favicon.svg"><style>:root{color-scheme:dark}body{background:#071015;color:#f2f7f5;font:16px system-ui;min-height:95vh;margin:0}main{width:min(360px,85vw);margin:8vh auto}main>p:first-child{color:#ff8a1f;font-weight:700;letter-spacing:.15em}input,button{box-sizing:border-box;width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid #31505a;font:inherit}input{background:#0c181e;color:#f2f7f5}button{background:#ff8a1f;color:#1b0d02;border-color:#ff8a1f;font-weight:650;cursor:pointer}button:hover{background:#ffa24f}input:focus-visible,button:focus-visible{outline:2px solid #ff8a1f;outline-offset:3px}p{color:#8ca3aa}p[role=alert]{color:#ff7a7a}</style><main><p>TECH HUB</p><h1>${name}</h1><p>Enter this service’s access password.</p><form method="post" action="/__hub/login"><label for="password">Service password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button>Open dashboard</button></form><p role="alert">${error}</p></main>`; }
-async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), launch=true,checkUpdates=launch}={}) {
+async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), launch=true,checkUpdates=launch,advertise=launch,namedPort=80,hostnameOptions={}}={}) {
   const updates=require('./updates.cjs').createUpdateChecker(require('../package.json').version);
   const config=loadConfig(dir), sessions=new Map(), attempts=new Map(), states=new Map(), servers=[],supervisors=new Map();
+  let hostnames,namedRouter;const gateways=new Map();let namingChange=false;
   const activeResponses=new Map(definitions.map(d=>[d.id,new Set()]));
   const changing=new Set();let mutations=0;
   function track(req,res){if(['GET','HEAD'].includes(req.method)||req.url==='/api/backup/restore')return;mutations++;let done=false;const finish=()=>{if(!done){done=true;mutations--;}};res.once('finish',finish);res.once('close',finish);}
   const local=req=>['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)&&['localhost','127.0.0.1','[::1]'].includes(new URL('http://'+req.headers.host).hostname);
   const chrome=require('./service-chrome.cjs');
-  const navigation=(req,id)=>({current:id,adminPort:config.adminPort,local:local(req),settings:local(req)&&['record','ultrix'].includes(id),services:services.filter(s=>config.services[s.id].enabled).map(s=>({id:s.id,name:s.name,port:s.port,protected:!!config.services[s.id].password,state:states.get(s.id)?.state}))});
+  const navigation=(req,id)=>({current:id,adminPort:config.adminPort,local:local(req),settings:local(req)&&['record','ultrix'].includes(id),services:services.filter(s=>config.services[s.id].enabled).map(s=>({id:s.id,name:s.name,port:s.port,hostnameURL:hostnames?.info(s.id).hostnameURL,networkURL:ips(config.host)[0]?`http://${ips(config.host)[0]}:${s.port}`:null,protected:!!config.services[s.id].password,state:states.get(s.id)?.state}))});
   let discovering=false;
   async function discoverHyperDecks(req,res){
     if(!local(req)||!sameOrigin(req))return send(res,403,{error:'Discovery is available only on the Tech Hub computer.'});
@@ -125,7 +128,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   }
   const logdir=path.join(dir,'logs'); fs.mkdirSync(logdir,{recursive:true,mode:0o700});
   const invalidate=id=>{for(const [key,s] of sessions) if(s.id===id)sessions.delete(key);for(const response of activeResponses.get(id))response.destroy();};
-  function status() {return {name:'Tech Hub',version:require('../package.json').version,adminPort:config.adminPort,startedAt,services:services.map(d=>({id:d.id,name:d.name,detail:d.detail,port:d.port,enabled:config.services[d.id].enabled,protected:!!config.services[d.id].password,localURL:`http://127.0.0.1:${d.port}`,urls:ips(config.host).map(ip=>`http://${ip}:${d.port}`),...states.get(d.id)}))};}
+  function status() {return {name:'Tech Hub',version:require('../package.json').version,adminPort:config.adminPort,startedAt,naming:{...config.naming,...namedRouter?.state,directory:hostnames?.info('master')},services:services.map(d=>({id:d.id,name:d.name,detail:d.detail,port:d.port,enabled:config.services[d.id].enabled,protected:!!config.services[d.id].password,localURL:`http://127.0.0.1:${d.port}`,urls:ips(config.host).map(ip=>`http://${ip}:${d.port}`),...hostnames?.info(d.id),...states.get(d.id)}))};}
   const diagnostics=require('./diagnostics.cjs').createDiagnostics(()=>services.map(d=>({...d,...states.get(d.id)})));
   for (const d of services) states.set(d.id,{state:'starting',error:null});
   const admin=http.createServer(async(req,res)=>{
@@ -135,6 +138,17 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
       if(restorePending&&req.method!=='GET')return send(res,409,{error:'Backup restored. Quit and reopen Tech Hub before making changes.'});
       if(chrome.asset(req,res))return;
       if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,navigation(req,'master'));
+      if(req.method==='POST'&&req.url==='/api/naming'){
+        if(!sameOrigin(req)||!/^application\/json/.test(req.headers['content-type']||''))return send(res,403,{error:'Use the local admin page.'});
+        const incoming=JSON.parse(await readBody(req));const naming=validateNaming({...incoming,names:incoming.names??config.naming.names});
+        if(namingChange)return send(res,409,{error:'Network names are being updated. Try again shortly.'});
+        namingChange=true;
+        try{
+          backups.snapshot(dir);const next={...config,naming};save(path.join(dir,'config.json'),next);config.naming=naming;
+          if(namedRouter){if(naming.portless)await namedRouter.start();else await namedRouter.stop();}
+          await hostnames?.sync();return send(res,200,{ok:true});
+        }finally{namingChange=false;}
+      }
       if(req.method==='POST'&&req.url==='/api/enabled'){
         if(!sameOrigin(req)||!/^application\/json/.test(req.headers['content-type']||''))return send(res,403,{error:'Use the local admin page.'});
         backups.snapshot(dir);
@@ -262,7 +276,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
       } catch(error){if(!res.headersSent)send(res,400,{error:error.message});else res.destroy();}
     });
     gateway.requestTimeout=15000;
-    try {d.port=await assign(gateway,d.port,config.host,config.services[d.id],'port');servers.push(gateway);} catch(error){states.set(d.id,{state:'error',error:`Unable to assign web port ${d.port}: ${error.message}`});continue;}
+    try {d.port=await assign(gateway,d.port,config.host,config.services[d.id],'port');servers.push(gateway);gateways.set(d.id,gateway);} catch(error){states.set(d.id,{state:'error',error:`Unable to assign web port ${d.port}: ${error.message}`});continue;}
     if(!launch){states.set(d.id,{state:config.services[d.id].enabled?'running':'disabled',error:null});continue;}
     const reservation=http.createServer();
     try {d.backendPort=await assign(reservation,d.backendPort,'127.0.0.1',config.services[d.id],'backendPort');await close(reservation);} catch(error){states.set(d.id,{state:'error',error:`Unable to assign internal port ${d.backendPort}: ${error.message}`});continue;}
@@ -292,8 +306,29 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   }
   try {save(path.join(dir,'runtime.json'),{pid:process.pid,adminPort:config.adminPort});} catch(error) {await Promise.all([...supervisors.values()].map(s=>s.stop()));await Promise.all(servers.map(close));throw error;}
   const cleanup=setInterval(()=>{for(const[k,s]of sessions)if(s.expires<Date.now())sessions.delete(k);for(const[k,a]of attempts)if(a.until<Date.now())attempts.delete(k);},60000);cleanup.unref();
+  if(advertise&&config.host==='0.0.0.0'){
+    const namedRoutes=()=>new Map([...(config.naming.portless&&namedRouter?.state.available?[[serviceHostname('master',config.naming.suffix,config.naming.names),'directory']]:[]),...services.filter(s=>gateways.has(s.id)).map(s=>[serviceHostname(s.id,config.naming.suffix,config.naming.names),gateways.get(s.id)])]);
+    namedRouter=require('./named-router.cjs').createNamedRouter({port:namedPort,getRoutes:namedRoutes,directory:(req,res)=>{
+      if(!sameOrigin(req))return send(res,403,{error:'Cross-origin requests are not allowed.'});
+      if(req.method!=='GET'||!['/','/style.css','/favicon.ico','/__hub/favicon.svg'].includes(req.url))return send(res,404,{error:'Not found'});
+      if(req.url==='/style.css')return send(res,200,fs.readFileSync(path.join(__dirname,'style.css')),'text/css');
+      if(req.url!=='/')return send(res,200,fs.readFileSync(path.join(__dirname,'icon-hub.svg')),'image/svg+xml');
+      const cards=services.filter(s=>config.services[s.id].enabled).map(s=>{
+        const url=hostnames?.info(s.id).hostnameURL||`http://${serviceHostname(s.id,config.naming.suffix,config.naming.names)}:${s.port}`;
+        const conflict=hostnames?.info(s.id).hostnameStatus==='conflict';
+        const link=conflict?(ips(config.host)[0]?`http://${ips(config.host)[0]}:${s.port}`:null):url;
+        return `<article class="card ${s.id}"><h2>${s.name}</h2><p>${s.detail}</p>${link?`<a class="open" href="${link}">Open dashboard ↗</a>`:'<p>Network address unavailable</p>'}</article>`;
+      }).join('');
+      return send(res,200,`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tech Hub</title><link rel="icon" href="/__hub/favicon.svg"><link rel="stylesheet" href="/style.css"></head><body><header><a class="brand" href="/">Tech Hub</a></header><main><h1>Choose an application.</h1><p class="sub">Enabled services on this Tech Hub. Each app keeps its own access password.</p><section id="services">${cards||'<p>No services are enabled.</p>'}</section></main></body></html>`,'text/html');
+    }});
+    if(config.naming.portless)await namedRouter.start();
+    hostnames=require('./hostnames.cjs').createHostnames({...hostnameOptions,dir,getSuffix:()=>config.naming.suffix,getNames:()=>config.naming.names,getServices:()=>[
+      ...(namedRouter.state.available?[{id:'master',name:'Tech Hub',enabled:true,port:namedRouter.state.port}]:[]),
+      ...services.filter(s=>gateways.has(s.id)).map(s=>({...s,port:namedRouter.state.available?namedRouter.state.port:s.port,enabled:config.services[s.id].enabled}))
+    ]});
+  }
   if(checkUpdates)void updates.check();
-  async function stop(){if(stopping)return;stopping=true;updates.stop();clearInterval(cleanup);await Promise.all([...supervisors.values()].map(s=>s.stop()));await Promise.all(servers.map(close));}
+  async function stop(){if(stopping)return;stopping=true;updates.stop();clearInterval(cleanup);await hostnames?.stop();await namedRouter?.stop();await Promise.all([...supervisors.values()].map(s=>s.stop()));await Promise.all(servers.map(close));}
   return {status,stop,config};
 }
 if(require.main===module)startHub().then(hub=>{console.log(`TECH_HUB_READY http://127.0.0.1:${hub.config.adminPort}`);if(process.env.TECH_HUB_STDIN_CONTROL==='1'){const lines=require('node:readline').createInterface({input:process.stdin});lines.on('line',line=>{if(line==='shutdown')hub.stop().then(()=>process.exit(0));});lines.on('close',()=>hub.stop().then(()=>process.exit(0)));}for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>hub.stop().then(()=>process.exit(0)));if(process.env.TECH_HUB_PARENT_PID){const parent=Number(process.env.TECH_HUB_PARENT_PID);setInterval(()=>{try{process.kill(parent,0);}catch{hub.stop().then(()=>process.exit(0));}},2000).unref();}}).catch(error=>{console.error(error.message);process.exitCode=1;});

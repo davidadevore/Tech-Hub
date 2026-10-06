@@ -1,5 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const resources=path.resolve(process.argv[2]);process.env.TECH_HUB_RESOURCES=resources;
+assert.equal(typeof require(require.resolve('bonjour-service',{paths:[resources]})).Bonjour,'function','Bundled mDNS dependencies must load');
 const {startHub,loadConfig,hashPassword}=require(path.join(resources,'hub/server.cjs'));
 (async()=>{const dir=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'tech-hub-smoke-'));let hub;const blockers=[];
 try {

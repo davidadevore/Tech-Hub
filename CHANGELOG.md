@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0 — 2026-10-06
+
+- Add short LAN names (`dsan.local`, `lux.local`, `pd.local`, `netgear.local`, `record.local`, `router.local`) with a user-entered machine identifier and editable per-service hostnames, including the Tech Hub directory. Accept names with or without `.local` and reject duplicate or invalid hostnames. Advertise enabled services over Bonjour/mDNS, detect reported name conflicts, and withdraw names on disable or shutdown.
+- Add an optional shared HTTP port 80 listener for URLs without port numbers, plus a `tech.local` app directory. Preserve service password checks and local-only administration; fall back to assigned ports when port 80 is unavailable. Configure and retry from the master page without restarting services. Update the app switcher to follow each service’s hostname.
+
 ## 0.6.0 — 2026-10-01
 
 - Renamed Ultrix Panel to **Router Panel** and added **Blackmagic Videohub** support (Videohub Ethernet Protocol 2.3, TCP 9990) alongside Ross Ultrix / SW-P-08. The Videohub client uses the router's live pushes, pings every 15 seconds, reconnects on a missed acknowledgement, and never sends a change in watch-only mode.

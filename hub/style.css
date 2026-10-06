@@ -27,3 +27,7 @@
 
 .card.ultrix{--accent:#55b5ff}.card.record{--accent:#ff727c}
 #maintenance{border:1px solid var(--line);border-radius:12px;margin:24px 0;padding:22px;background:var(--panel)}#maintenance p{font-size:13px;color:var(--muted-bright)}#backupDialog,#diagnosticsDialog{max-width:850px;max-height:88dvh;overflow:auto}#backupDialog>button{margin:12px 0}#backupError{color:var(--red)}#backupDialog select{width:100%;padding:12px;background:var(--bg);color:var(--text);font:inherit;border:1px solid var(--line-bright)}#diagnosticResults section{border-bottom:1px solid var(--line);padding:12px 0}#diagnosticResults p{overflow-wrap:anywhere}#restoreNotice:not(:empty){color:var(--brand)}
+
+#networkNames{border:1px solid var(--line);border-radius:12px;margin:24px 0;padding:22px;background:var(--panel)}#networkNames p{overflow-wrap:anywhere}#machineSuffix{width:100%;max-width:420px;display:block;margin:10px 0}#namingStatus a{color:var(--brand)}
+
+.hostnameFields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px}.hostnameFields label{display:flex;flex-direction:column;gap:8px;min-width:0}.hostnameFields input{width:100%;min-width:0}

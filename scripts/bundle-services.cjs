@@ -16,5 +16,21 @@ function dependency(name,from){
  for(const child of Object.keys(data.dependencies||{}))dependency(child,path.dirname(manifest));
 }
 dependency('net-snmp',source);
+// Hub dependencies are separate from the NETGEAR collector's dependency tree.
+const hubCopied=new Set();
+function hubDependency(name,from){
+ if(hubCopied.has(name))return;hubCopied.add(name);
+ // Some packages intentionally hide package.json behind an exports map.
+ let directory=path.dirname(require.resolve(name,{paths:[from]})),manifest,data;
+ while(true){
+  manifest=path.join(directory,'package.json');
+  if(fs.existsSync(manifest)){data=JSON.parse(fs.readFileSync(manifest,'utf8'));if(data.name===name)break;}
+  const parent=path.dirname(directory);if(parent===directory)throw Error('Unable to locate dependency '+name);directory=parent;
+ }
+
+ copy(path.dirname(manifest),path.join(destination,'node_modules',name));
+ for(const child of Object.keys(data.dependencies||{}))hubDependency(child,path.dirname(manifest));
+}
+hubDependency('bonjour-service',root);
 copy(path.join(root,'THIRD_PARTY.md'),path.join(destination,'THIRD_PARTY.md'));
 console.log('Bundled NETGEAR AV Switchboard, Record Monitor, and Router Panel.');
