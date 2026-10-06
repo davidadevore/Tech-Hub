@@ -144,7 +144,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   }
   const logdir=path.join(dir,'logs'); fs.mkdirSync(logdir,{recursive:true,mode:0o700});
   const invalidate=id=>{for(const [key,s] of sessions) if(s.id===id)sessions.delete(key);for(const response of activeResponses.get(id))response.destroy();};
-  function status() {return {name:'Tech Hub',version:require('../package.json').version,adminPort:config.adminPort,startedAt,remoteAdmin:{enabled:config.remoteAdmin.enabled,passwordSet:!!config.remoteAdmin.password,urls:ips(config.host).map(ip=>`http://${ip}:${config.adminPort}`)},naming:{...config.naming,...namedRouter?.state,directory:hostnames?.info('master')},services:services.map(d=>({installed:isInstalled(d.id),id:d.id,name:d.name,detail:d.detail,port:d.port,enabled:config.services[d.id].enabled,protected:!!config.services[d.id].password,localURL:`http://127.0.0.1:${d.port}`,urls:ips(config.host).map(ip=>`http://${ip}:${d.port}`),...hostnames?.info(d.id),...states.get(d.id)}))};}
+  function status() {return {moduleUpdates:library?.snapshot().updateCount||0,name:'Tech Hub',version:require('../package.json').version,adminPort:config.adminPort,startedAt,remoteAdmin:{enabled:config.remoteAdmin.enabled,passwordSet:!!config.remoteAdmin.password,urls:ips(config.host).map(ip=>`http://${ip}:${config.adminPort}`)},naming:{...config.naming,...namedRouter?.state,directory:hostnames?.info('master')},services:services.map(d=>({installed:isInstalled(d.id),installedVersion:library?.read(d.id)?.manifest.version||null,id:d.id,name:d.name,detail:d.detail,port:d.port,enabled:config.services[d.id].enabled,protected:!!config.services[d.id].password,localURL:`http://127.0.0.1:${d.port}`,urls:ips(config.host).map(ip=>`http://${ip}:${d.port}`),...hostnames?.info(d.id),...states.get(d.id)}))};}
   const diagnostics=require('./diagnostics.cjs').createDiagnostics(()=>services.map(d=>({...d,...states.get(d.id)})));
   for (const d of services) states.set(d.id,{state:'starting',error:null});
   const admin=http.createServer(async(req,res)=>{
@@ -179,32 +179,32 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
       if(restorePending&&req.method!=='GET')return send(res,409,{error:'Backup restored. Quit and reopen Tech Hub before making changes.'});
       if(chrome.asset(req,res))return;
       if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,navigation(req,'master'));
-      if(req.method==='GET'&&req.url==='/api/apps')return send(res,200,library?{...library.snapshot(),loaded:services.map(s=>s.id),recommended:migration.recommended}:{apps:[],installed:[],error:'App Library is available in the packaged desktop host.'});
-      if(req.method==='POST'&&req.url==='/api/apps/refresh'){if(!library)return send(res,400,{error:'App Library unavailable'});void library.refresh();return send(res,202,{ok:true});}
+      if(req.method==='GET'&&req.url==='/api/apps')return send(res,200,library?{...library.snapshot(),loaded:services.map(s=>s.id),recommended:migration.recommended}:{apps:[],installed:[],error:'Module Library is available in the packaged desktop host.'});
+      if(req.method==='POST'&&req.url==='/api/apps/refresh'){if(!library)return send(res,400,{error:'Module Library unavailable'});void library.refresh();return send(res,202,{ok:true});}
       if(req.method==='POST'&&req.url==='/api/apps/local/inspect'){
-        if(!library||library.busy||changing.size)return send(res,409,{error:'Wait for the current app operation.'});
-        if(req.headers['content-type']!=='application/zip')return send(res,400,{error:'Choose an app ZIP package'});
+        if(!library||library.busy||changing.size)return send(res,409,{error:'Wait for the current module operation.'});
+        if(req.headers['content-type']!=='application/zip')return send(res,400,{error:'Choose an module ZIP package'});
         const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>256*1024*1024)return send(res,413,{error:'Package exceeds 256 MB'});chunks.push(chunk);}
         return send(res,200,library.inspectLocal(Buffer.concat(chunks)));
       }
       if(req.method==='POST'&&req.url==='/api/apps/local/cancel'){const body=JSON.parse(await readBody(req));library?.cancelLocal(body.token);return send(res,200,{ok:true});}
       if(req.method==='POST'&&req.url==='/api/apps/local/install'){
-        if(!library||library.busy||changing.size)return send(res,409,{error:'Wait for the current app operation.'});
+        if(!library||library.busy||changing.size)return send(res,409,{error:'Wait for the current module operation.'});
         const body=JSON.parse(await readBody(req));if(body.confirm!==true||typeof body.token!=='string')return send(res,400,{error:'Review and confirm the unofficial package first'});
         return send(res,200,{ok:true,...await library.installLocal(body.token)});
       }
       if(req.method==='POST'&&req.url==='/api/apps/import'){
-        if(!library||library.busy||changing.size)return send(res,409,{error:'Wait for the current app operation.'});
-        if(req.headers['content-type']!=='application/zip')return send(res,400,{error:'Choose an all-apps ZIP bundle'});
+        if(!library||library.busy||changing.size)return send(res,409,{error:'Wait for the current module operation.'});
+        if(req.headers['content-type']!=='application/zip')return send(res,400,{error:'Choose an all-modules ZIP bundle'});
         const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>512*1024*1024)return send(res,413,{error:'Bundle exceeds 512 MB'});chunks.push(chunk);}
-        if(library.busy||changing.size)return send(res,409,{error:'Wait for the current app operation.'});
+        if(library.busy||changing.size)return send(res,409,{error:'Wait for the current module operation.'});
         await library.importBundle(Buffer.concat(chunks));return send(res,200,{ok:true});
       }
       if(req.method==='POST'&&req.url==='/api/apps/action'){
-        if(!library||!/^application\/json/.test(req.headers['content-type']||''))return send(res,400,{error:'App Library unavailable or invalid request'});
-        if(library.busy||changing.size)return send(res,409,{error:'Wait for the current app operation.'});
+        if(!library||!/^application\/json/.test(req.headers['content-type']||''))return send(res,400,{error:'Module Library unavailable or invalid request'});
+        if(library.busy||changing.size)return send(res,409,{error:'Wait for the current module operation.'});
         const body=JSON.parse(await readBody(req));
-        if(!Array.isArray(body.ids)||!body.ids.length||body.ids.length>100||body.ids.some(id=>!library.snapshot().apps.some(a=>a.id===id))||!['install','uninstall','rollback'].includes(body.action))return send(res,400,{error:'Select apps from App Library'});
+        if(!Array.isArray(body.ids)||!body.ids.length||body.ids.length>100||body.ids.some(id=>!library.snapshot().apps.some(a=>a.id===id))||!['install','uninstall','rollback'].includes(body.action))return send(res,400,{error:'Select apps from Module Library'});
         void library.run(body.ids,body.action).catch(()=>{});return send(res,202,{ok:true});
       }
       if(req.method==='POST'&&req.url==='/api/naming'){
@@ -223,8 +223,8 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         backups.snapshot(dir);
         const {id,enabled}=JSON.parse(await readBody(req));
         if(!definitions.some(s=>s.id===id)||typeof enabled!=='boolean')return send(res,400,{error:'Choose a valid service and enabled state.'});
-        if(library?.busy)return send(res,409,{error:'Wait for the app installation to finish.'});
-        if(enabled&&!isInstalled(id))return send(res,400,{error:'Install this app from App Library first.'});
+        if(library?.busy)return send(res,409,{error:'Wait for the module installation to finish.'});
+        if(enabled&&!isInstalled(id))return send(res,400,{error:'Install this module from Module Library first.'});
         if(changing.has(id))return send(res,409,{error:'Service state is changing. Try again shortly.'});
         changing.add(id);
         try{
@@ -272,7 +272,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
       if(req.method==='POST'&&req.url==='/api/restart') {
         if(!sameOrigin(req) || !/^application\/json/.test(req.headers['content-type']||''))return send(res,403,{error:'Use the local admin page.'});
         const body=JSON.parse(await readBody(req)), supervisor=supervisors.get(body.id);
-        if(library?.busy)return send(res,409,{error:'Wait for the app installation to finish.'});
+        if(library?.busy)return send(res,409,{error:'Wait for the module installation to finish.'});
         if(!supervisor||!isInstalled(body.id)||!config.services[body.id]?.enabled||changing.has(body.id))return send(res,400,{error:'Enable the service before restarting, and wait for any pending change.'});
         if(states.get(body.id).state==='starting'||states.get(body.id).state==='recovering')return send(res,409,{error:'Service recovery is already in progress.'});
         states.set(body.id,{state:'recovering',error:null});
@@ -318,16 +318,16 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
           const token=crypto.randomBytes(32).toString('hex');sessions.set(token,{id:d.id,expires:Date.now()+12*3600000});attempts.delete(key);
           res.writeHead(303,{'Location':'/','Set-Cookie':`techhub_${d.id}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`,'Cache-Control':'no-store'});res.end();return;
         }
-        if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,{...navigation(req,d.id),settings:!!authed&&administrator(req)&&['record','ultrix'].includes(d.id),authRequired:!authed,message:!authed?'Session expired or password required. Sign in again.':!config.services[d.id].enabled?'Service off. Choose another app.':states.get(d.id).state!=='running'?'Reconnecting — '+states.get(d.id).state:null});
+        if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,{...navigation(req,d.id),settings:!!authed&&administrator(req)&&['record','ultrix'].includes(d.id),authRequired:!authed,message:!authed?'Session expired or password required. Sign in again.':!config.services[d.id].enabled?'Service off. Choose another module.':states.get(d.id).state!=='running'?'Reconnecting — '+states.get(d.id).state:null});
         if(!authed) return send(res,401,req.url.startsWith('/api/')?{error:'Service password required'}:loginPage(d.name),req.url.startsWith('/api/')?'application/json':'text/html');
         if(req.method==='GET'&&req.url==='/__hub/navigation')return send(res,200,navigation(req,d.id));
         if(req.url==='/__hub/settings'&&['record','ultrix'].includes(d.id))return await configure(req,res,d.id);
         if(req.url==='/__hub/discover-hyperdecks'&&d.id==='record')return await discoverHyperDecks(req,res);
         if(req.method==='POST'&&req.url==='/__hub/heartbeat'){if(config.services[d.id].enabled&&isInstalled(d.id))viewers.touch(req,d.id);return send(res,200,{ok:true});}
-        if(!isInstalled(d.id))return send(res,503,chrome.disabled(d.name,'Install this app from Tech Hub’s App Library.','not installed'),'text/html');
+        if(!isInstalled(d.id))return send(res,503,chrome.disabled(d.name,'Install this module from Tech Hub’s Module Library.','not installed'),'text/html');
         if(!config.services[d.id].enabled)return send(res,503,chrome.disabled(d.name),'text/html');
-        if(states.get(d.id).state!=='running')return send(res,503,req.url.startsWith('/api/')?{error:'Service reconnecting'}:chrome.disabled(d.name,'Reconnecting. You can choose another app above.','reconnecting'),req.url.startsWith('/api/')?'application/json':'text/html');
-        if(req.url.startsWith('/api/update')&&d.id==='power')return send(res,200,{current_version:require('../package.json').version,available:false,error:'Manage Power Monitor updates in Tech Hub’s App Library.'});
+        if(states.get(d.id).state!=='running')return send(res,503,req.url.startsWith('/api/')?{error:'Service reconnecting'}:chrome.disabled(d.name,'Reconnecting. You can choose another module above.','reconnecting'),req.url.startsWith('/api/')?'application/json':'text/html');
+        if(req.url.startsWith('/api/update')&&d.id==='power')return send(res,200,{current_version:require('../package.json').version,available:false,error:'Manage Power Monitor updates in Tech Hub’s Module Library.'});
         if(['POST','PUT','PATCH','DELETE'].includes(req.method)&&['/api/config','/api/devices','/api/devices/layout','/api/devices/ports','/api/color-scheme'].includes(req.url.split('?')[0]))backups.snapshot(dir);
         const headers={...req.headers,host:`127.0.0.1:${d.backendPort}`}; delete headers.cookie;delete headers.authorization;
         headers['x-techhub-local-client']=administrator(req)?'1':'0';
@@ -373,7 +373,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
       autoStart:config.services[d.id].enabled&&isInstalled(d.id),
       start:()=>{
         let appRoot=resources,assetRoot="";
-        if(library){const installed=library.read(d.id);if(!installed)throw Error('Install this app from App Library.');appRoot=installed.root;assetRoot=installed.manifest.runtime!=='native'?appRoot:"";({command,args}=require('./app-runtime.cjs').launchSpec(installed,{resources,dataDir,port:d.backendPort}));if(d.id==='power'&&installed.manifest.runtime==='native')args=['--host','127.0.0.1','--port',String(d.backendPort),'--config',path.join(dataDir,'settings.json'),'--no-browser'];if(['record','ultrix'].includes(d.id))args.push('--config',serviceConfig.file(dir,d.id));}
+        if(library){const installed=library.read(d.id);if(!installed)throw Error('Install this module from Module Library.');appRoot=installed.root;assetRoot=installed.manifest.runtime!=='native'?appRoot:"";({command,args}=require('./app-runtime.cjs').launchSpec(installed,{resources,dataDir,port:d.backendPort}));if(d.id==='power'&&installed.manifest.runtime==='native')args=['--host','127.0.0.1','--port',String(d.backendPort),'--config',path.join(dataDir,'settings.json'),'--no-browser'];if(['record','ultrix'].includes(d.id))args.push('--config',serviceConfig.file(dir,d.id));}
         const log=fs.openSync(logPath,'a',0o600);
         const child=spawn(command,args,{windowsHide:true,env:{...process.env,TECH_HUB_APP_ROOT:assetRoot,TECH_HUB_RUNTIME_API:path.join(__dirname,'runtime-api.cjs'),TECH_HUB_MANAGED:'1',TECH_HUB_VERSION:require('../package.json').version,TECH_HUB_PUBLIC_PORT:String(d.port),TECH_HUB_PUBLIC_HOST:config.host,TECH_HUB_BACKEND_PORT:String(d.backendPort),TECH_HUB_BACKEND_HOST:'127.0.0.1',TECH_HUB_DATA_DIR:dataDir,LNA_APP_SUPPORT:dataDir,LNA_MA_READER:process.platform==='darwin'?path.join(appRoot,'MA Web Remote Reader.app','Contents','MacOS','MA Web Remote Reader'):''},stdio:['ignore',log,log]});fs.closeSync(log);return child;
       },
@@ -399,7 +399,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
         const link=conflict?(ips(config.host)[0]?`http://${ips(config.host)[0]}:${s.port}`:null):url;
         return `<article class="card ${s.id}"><h2>${escapeHTML(s.name)}</h2><p>${escapeHTML(s.detail)}</p>${link?`<a class="open" href="${link}">Open dashboard ↗</a>`:'<p>Network address unavailable</p>'}</article>`;
       }).join('');
-      return send(res,200,`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tech Hub</title><link rel="icon" href="/__hub/favicon.svg"><link rel="stylesheet" href="/style.css"></head><body><header><a class="brand" href="/">Tech Hub</a></header><main><h1>Choose an application.</h1><p class="sub">Enabled services on this Tech Hub. Each app keeps its own access password.</p>${config.remoteAdmin.enabled?'<p><a href="/admin">Administrator sign-in ↗</a></p>':''}<section id="services">${cards||'<p>No services are enabled.</p>'}</section></main></body></html>`,'text/html');
+      return send(res,200,`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tech Hub</title><link rel="icon" href="/__hub/favicon.svg"><link rel="stylesheet" href="/style.css"></head><body><header><a class="brand" href="/">Tech Hub</a></header><main><h1>Choose a module.</h1><p class="sub">Enabled services on this Tech Hub. Each app keeps its own access password.</p>${config.remoteAdmin.enabled?'<p><a href="/admin">Administrator sign-in ↗</a></p>':''}<section id="services">${cards||'<p>No services are enabled.</p>'}</section></main></body></html>`,'text/html');
     }});
     if(config.naming.portless)await namedRouter.start();
     hostnames=require('./hostnames.cjs').createHostnames({...hostnameOptions,dir,getSuffix:()=>config.naming.suffix,getNames:()=>config.naming.names,getServices:()=>[

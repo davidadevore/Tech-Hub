@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Move the connection-status and version bar directly below the page footer.
+
+- Rename installable apps to modules throughout the host interface and SDK documentation; retain existing package and API names for compatibility.
+- Show module versions on dashboard cards and installed/catalog versions in Module Library. Add Check for updates, Update all, last-checked time, and incompatible-update guidance.
+- Keep official module versions independent of host versions in modules.json. Avoid implicit downgrades from older catalogs; unofficial modules remain manually updated.
+
 ## 1.0.1 — 2026-10-06
 
 - One universal app package per service, usable on Mac and Windows, plus a single **Tech-Hub-All-Apps.zip** offline download.

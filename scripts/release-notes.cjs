@@ -6,25 +6,25 @@ function downloads(version,apps){
  const link=(name,file)=>`[${name}](${base}${file})`;
  return `## Downloads
 
-### Full w/all apps
+### Full w/all modules
 
-Tech Hub with all official apps included for offline installation.
+Tech Hub with all official modules included for offline installation.
 
 - ${link('Mac — Apple silicon','Tech-Hub-macOS-arm64-Full.dmg')}
 - ${link('Windows — x64','Tech-Hub-Windows-x64-Full-Setup.exe')}
 
 ### Lite Installer
 
-Tech Hub host and shared runtime. Choose and download apps from the App Library after installation.
+Tech Hub host and shared runtime. Choose and download modules from the Module Library after installation.
 
 - ${link('Mac — Apple silicon','Tech-Hub-macOS-arm64.dmg')}
 - ${link('Windows — x64','Tech-Hub-Windows-x64-Setup.exe')}
 
-### Apps
+### Modules
 
-Universal app packages for both Mac and Windows. Install official apps through the App Library; use the all-apps ZIP for offline installation.
+Universal module packages for both Mac and Windows. Install official modules through the Module Library; use the all-modules ZIP for offline installation.
 
-- **${link('Download all apps','Tech-Hub-All-Apps.zip')}**
+- **${link('Download all modules','Tech-Hub-All-Apps.zip')}**
 ${apps.map(a=>`- ${link(a.name,new URL(a.packages.universal.url).pathname.split('/').pop())}`).join('\n')}
 - ${link('Developer SDK','Tech-Hub-SDK.zip')}
 

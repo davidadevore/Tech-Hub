@@ -17,13 +17,13 @@ Share individual service URLs from the master page. Set separate service
 passwords there if you need restricted access. The admin page is local to this
 Mac. HTTP is unencrypted; use a trusted show network.
 
-Quit Tech Hub from the TH menu before replacing the app with an update.
+Quit Tech Hub from the TH menu before replacing the module with an update.
 Configuration is stored in ~/Library/Application Support/Tech Hub and survives
-app updates. The menu provides shortcuts to configuration and logs.
+module updates. The menu provides shortcuts to configuration and logs.
 
 
-## Tech Hub 1.0 app choices
+## Tech Hub 1.0 module choices
 
-Choose Host for a smaller download and install apps from App Library. Choose Full to include all five official apps without internet access. The all-apps ZIP can also be imported through App Library on an existing host; use the universal ZIP matching your host catalog version. The Full installer retains previously disabled services. App updates and uninstall preserve settings. Existing 0.x installations can use Install previously enabled apps after a Host upgrade. Quit Tech Hub before replacing the desktop application.
+Choose Host for a smaller download and install modules from Module Library. Choose Full to include all five official modules without internet access. The all-modules ZIP can also be imported through Module Library on an existing host; use the universal ZIP matching your host catalog version. The Full installer retains previously disabled services. Module updates and uninstall preserve settings. Existing 0.x installations can use Install previously enabled modules after a Host upgrade. Quit Tech Hub before replacing the desktop application.
 
-App packages are universal between supported Mac and Windows hosts. Tech Hub provides Node and the native D’san/Power compatibility engines. Lux Link is paused; existing settings are retained. See sdk/SHARED-RUNTIME.md for the runtime contract.
+Module packages are universal between supported Mac and Windows hosts. Tech Hub provides Node and the native D’san/Power compatibility engines. Lux Link is paused; existing settings are retained. See sdk/SHARED-RUNTIME.md for the runtime contract.

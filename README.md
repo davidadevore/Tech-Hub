@@ -1,51 +1,57 @@
 # Tech Hub
 
-One desktop application for **D’san Ready**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, and **Router Panel**. Install only the apps you need, or choose the Full download with all five pre-installed. Tech Hub provides a local master page with their status, ports, and shareable network URLs.
+One desktop application for **D’san Ready**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, and **Router Panel**. Install only the modules you need, or choose the Full download with all five pre-installed. Tech Hub provides a local master page with their status, ports, and shareable network URLs.
 
 ## Downloads
 
-Version **1.0.1** adds universal app packages and a shared host runtime. Lux Link is paused; its saved settings are retained. See the [changelog](CHANGELOG.md).
+Version **1.0.1** adds universal module packages and a shared host runtime. The current installer labels the library “App Library”; “Module Library” and the new update controls are prepared for the next build. Lux Link is paused; its saved settings are retained. See the [changelog](CHANGELOG.md).
 
-### Full w/all apps
+### Full w/all modules
 
-Tech Hub with all five apps included for offline installation.
+Tech Hub with all five modules included for offline installation.
 
 - [Mac — Apple silicon](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64-Full.dmg)
 - [Windows — x64](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Full-Setup.exe)
 
 ### Lite Installer
 
-Tech Hub host and shared runtime. Choose and download apps from the App Library after installation.
+Tech Hub host and shared runtime. Choose and download modules from the Module Library after installation.
 
 - [Mac — Apple silicon](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64.dmg)
 - [Windows — x64](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Setup.exe)
 
-### Apps
+### Modules
 
 Universal packages for Mac and Windows.
 
-- **[Download all apps — offline ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps.zip)**
-- [Individual app downloads](https://github.com/horner516/Tech-Hub/releases/latest#apps)
+- **[Download all modules — offline ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps.zip)**
+- [Individual module downloads](https://github.com/horner516/Tech-Hub/releases/latest)
 - [Download Developer SDK](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-SDK.zip)
 - [AI tools — development instructions and starter prompts](sdk/AI-DEVELOPMENT.md)
 - [SDK documentation and shared-runtime guide](sdk/SHARED-RUNTIME.md)
 
 
-Open **App Library** in the master page to install individual apps, **Install selected**, or **Install all apps**. Full installers unpack their included apps on first launch. To use an all-apps ZIP, choose **App Library → Offline installation → Install offline bundle**. The ZIP must match the official catalog shipped with the host or a refreshed catalog. Do not extract it first. All installed apps remain available offline.
+Open **Module Library** in the master page to install individual modules, **Install selected**, or **Install all modules**. Full installers unpack their included modules on first launch. To use an all-modules ZIP, choose **Module Library → Offline installation → Install offline bundle**. The ZIP must match the official catalog shipped with the host or a refreshed catalog. Do not extract it first. All installed modules remain available offline.
 
-Upgrading from 0.x retains service settings, passwords, and ports. The Host installer offers **Install previously enabled apps**; the Full installer includes all apps and respects saved enabled/disabled settings. Once an app is installed, its service slider controls whether it runs and appears in shared navigation. App updates and rollback are separate from host updates. Uninstall removes app files while retaining settings. A newly added third-party app requires reopening Tech Hub once; the five official apps activate immediately.
+Upgrading from 0.x retains service settings, passwords, and ports. The Host installer offers **Install previously enabled modules**; the Full installer includes all modules and respects saved enabled/disabled settings. Once a module is installed, its service slider controls whether it runs and appears in shared navigation. Module updates and rollback are separate from host updates. Uninstall removes module files while retaining settings. A newly added third-party module requires reopening Tech Hub once; the five official modules activate immediately.
 
-### Universal apps and shared runtime
+### Module versions and updates
 
-One app ZIP now works on both supported platforms. Tech Hub supplies Node 24, settings helpers, ports, logging and supervision. D’san and Power Monitor retain their tested native protocol engines as host-managed drivers; they have not been rewritten into JavaScript. Their UI packages are universal, while engine changes require a host update. The other three apps run on shared Node. The Mac and Windows host installers remain platform-specific.
+Each module package includes its own `version` and `minHostVersion` in `techhub-app.json`. In the next host build, **Module Library → Check for updates** shows installed and catalog versions, the last successful check, and updates requiring a newer host. Use **Update** for one module or **Update all** for compatible official updates. Checking does not install anything. Unofficial modules are updated by importing a newer package from their developer.
 
-Existing v1.0.0 apps continue to work (except paused Lux Link); use App Library to update them to universal v1.0.1 packages. Settings, passwords and ports are retained. Lux Link is omitted from the catalog, navigation and new installations, and existing Lux data remains on disk.
+The current v1.0.1 installer calls this **App Library → Refresh catalog**; it already supports individual updates. The renamed controls are pending the next installer build. Host updates remain separate. D’san and Power Monitor native engine changes still require a host update.
 
-### Develop an app
+### Universal modules and shared runtime
+
+One module ZIP now works on both supported platforms. Tech Hub supplies Node 24, settings helpers, ports, logging and supervision. D’san and Power Monitor retain their tested native protocol engines as host-managed drivers; they have not been rewritten into JavaScript. Their UI packages are universal, while engine changes require a host update. The other three modules run on shared Node. The Mac and Windows host installers remain platform-specific.
+
+Existing v1.0.0 modules continue to work (except paused Lux Link); use Module Library to update them to universal v1.0.1 packages. Settings, passwords and ports are retained. Lux Link is omitted from the catalog, navigation and new installations, and existing Lux data remains on disk.
+
+### Develop a module
 
 [Download the SDK](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-SDK.zip) · [SDK documentation](sdk/README.md) · [AI development instructions](sdk/AI-DEVELOPMENT.md) · [Design guide](sdk/DESIGN.md)
 
-The SDK includes a [shared-runtime guide](sdk/SHARED-RUNTIME.md), a working starter app, manifest validator, package builder, visual conventions, and prompts/checklists for developers using AI tools. **Testing outside the catalog:** open **App Library → Testing & evaluation**, choose an app ZIP, review its details, and confirm installation. Unofficial apps are clearly labeled and support manual updates, rollback, and uninstall with settings retained. Use a unique app ID; local packages cannot overwrite official apps. Reopen Tech Hub once to load a newly added app. App submissions are reviewed before inclusion in the official catalog. Apps run as the signed-in user; permission declarations are not an OS sandbox.
+The SDK includes a [shared-runtime guide](sdk/SHARED-RUNTIME.md), a working starter module, manifest validator, package builder, visual conventions, and prompts/checklists for developers using AI tools. **Testing outside the catalog:** open **Module Library → Testing & evaluation**, choose a module ZIP, review its details, and confirm installation. Unofficial modules are clearly labeled and support manual updates, rollback, and uninstall with settings retained. Use a unique module ID; local packages cannot overwrite official modules. Reopen Tech Hub once to load a newly added module. Module submissions are reviewed before inclusion in the official catalog. Modules run as the signed-in user; permission declarations are not an OS sandbox.
 
 ### Companion module
 
@@ -61,7 +67,7 @@ Nine ready-made presets provide minutes, seconds, a combined clock, all four Lim
 
 **[Download Tech Hub for Windows — x64](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Setup.exe)**
 
-Windows 10 (1809+) or Windows 11, x64. Run the installer, then open Tech Hub from Start. The **TH** system-tray menu provides **Open Control Page**, **Check for Updates**, **Open Logs**, and **Quit Tech Hub**. Double-click TH to open the control page. There is no floating widget or Windows Widgets-board integration. The app includes its runtimes and does not require a separate .NET installation.
+Windows 10 (1809+) or Windows 11, x64. Run the installer, then open Tech Hub from Start. The **TH** system-tray menu provides **Open Control Page**, **Check for Updates**, **Open Logs**, and **Quit Tech Hub**. Double-click TH to open the control page. There is no floating widget or Windows Widgets-board integration. The module includes its runtimes and does not require a separate .NET installation.
 
 The Windows installer installs for the current user and preserves settings during upgrades/uninstall. It is unsigned. On trusted show networks, allow the bundled Node runtime through Windows Firewall when sharing dashboards; the installer does not change firewall settings.
 
@@ -71,11 +77,11 @@ The Windows installer installs for the current user and preserves settings durin
 
 [Release notes and all downloads](https://github.com/horner516/Tech-Hub/releases/latest) · [SHA-256 checksum](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64.dmg.sha256)
 
-Requires **macOS 13 or later on an Apple silicon Mac (M1 or later)**. Intel Macs are not supported by this installer. Node.js and the D’san/Power compatibility engines are included in the host; universal app packages contain their code and assets; no development tools are needed to run it.
+Requires **macOS 13 or later on an Apple silicon Mac (M1 or later)**. Intel Macs are not supported by this installer. Node.js and the D’san/Power compatibility engines are included in the host; universal module packages contain their code and assets; no development tools are needed to run it.
 
 1. Open the DMG and drag **Tech Hub** into **Applications**.
 2. Open Tech Hub. Click **TH** in the menu bar, then **Open Master Page**.
-3. Open App Library to install selected apps (or use the Full installer), then add your devices in each service. New installations start with empty device lists.
+3. Open Module Library to install selected modules (or use the Full installer), then add your devices in each service. New installations start with empty device lists.
 4. Copy the service’s network URL from the master page to share with your crew.
 
 This initial build is **ad-hoc signed, not Apple Developer ID signed or notarized**. macOS may require **System Settings → Privacy & Security → Open Anyway** on first launch. See [installation details](INSTALL.md).
@@ -90,9 +96,9 @@ Signed-in administrators can manage services, access passwords, configuration, b
 
 ## Dashboard ports
 
-Tech Hub offers short Bonjour/mDNS names: `http://dsan.local`, `http://pd.local`, `http://netgear.local`, `http://record.local`, and `http://router.local`. `http://tech.local` opens a network app directory showing enabled services. Service passwords still apply; the administrative master page opens from the TH menu, with optional network access configured in Settings.
+Tech Hub offers short Bonjour/mDNS names: `http://dsan.local`, `http://pd.local`, `http://netgear.local`, `http://record.local`, and `http://router.local`. `http://tech.local` opens a network module directory showing enabled services. Service passwords still apply; the administrative master page opens from the TH menu, with optional network access configured in Settings.
 
-On the master page, **Settings → Local network names → Machine identifier** adds an optional suffix to every name. For example, entering `stage1` produces `dsan-stage1.local`, `tech-stage1.local`, and `pd-stage1.local`. Leave it blank for the shortest names. Under **Service hostnames**, edit each app’s name independently (including the Tech Hub directory). Enter `dsan1` or `dsan1.local`; both produce `dsan1.local` with no machine identifier, or `dsan1-stage1.local` with identifier `stage1`. Names must be distinct within Tech Hub, and each name plus identifier must fit the 63-character DNS label limit. Use a different identifier for each Tech Hub computer on the same network. Identifiers accept up to 32 letters, numbers, and internal hyphens. Saving applies live; existing viewers should reopen the updated links. Name conflicts reported by another mDNS device disable that name and show a warning; choose another identifier or use an IP link. mDNS is not a central name registry, so deliberately assign unique identifiers on shared networks.
+On the master page, **Settings → Local network names → Machine identifier** adds an optional suffix to every name. For example, entering `stage1` produces `dsan-stage1.local`, `tech-stage1.local`, and `pd-stage1.local`. Leave it blank for the shortest names. Under **Service hostnames**, edit each module’s name independently (including the Tech Hub directory). Enter `dsan1` or `dsan1.local`; both produce `dsan1.local` with no machine identifier, or `dsan1-stage1.local` with identifier `stage1`. Names must be distinct within Tech Hub, and each name plus identifier must fit the 63-character DNS label limit. Use a different identifier for each Tech Hub computer on the same network. Identifiers accept up to 32 letters, numbers, and internal hyphens. Saving applies live; existing viewers should reopen the updated links. Name conflicts reported by another mDNS device disable that name and show a warning; choose another identifier or use an IP link. mDNS is not a central name registry, so deliberately assign unique identifiers on shared networks.
 
 **Use addresses without port numbers** enables a shared HTTP listener on TCP port 80. The hostname selects the existing service gateway, preserving its password checks and the client’s actual address. If port 80 is busy or permission is denied, Tech Hub keeps running with hostname-and-port links such as `http://dsan.local:8701`, explains the failure on the master page, and provides a retry button. It does not stop the other application, change firewall rules, or request elevated privileges. The `tech.local` directory is available only when the shared listener is running. Existing IP-and-port links remain available in either mode.
 
@@ -115,7 +121,7 @@ Use **Configure** on Record Monitor to edit its JSON settings. Add entries to `d
 
 Use **Configure routers** on Router Panel (formerly Ultrix Panel) to open its settings page. Like the NETGEAR setup page, it opens on the Tech Hub computer or for a signed-in network administrator. Save one or more routers, choose the type (**Ross Ultrix / SW-P-08** or **Blackmagic Videohub**), enter the address and port, and choose which router is **active**. Only the active router connects. Each saved router keeps its own levels, sources, destinations, categories, name overrides and access profiles. Switching the active router reconnects the panel with that router's setup. A blank address keeps a router disconnected. A Videohub has one level. Categories show a live preview of how the active router's names will be grouped. Existing Ultrix Panel settings are upgraded to one saved router automatically. See the [Router Panel configuration guide](services/ultrix/README.md). Facility configuration and exported router names are not included in public downloads.
 
-All five services use the same port-conflict avoidance, password gates, logs, and individual restart controls. Existing Tech Hub ports and passwords survive upgrades. Power Monitor runs without a separate Windows tray icon when launched by Tech Hub; the standalone Power Monitor app retains its own tray.
+All five services use the same port-conflict avoidance, password gates, logs, and individual restart controls. Existing Tech Hub ports and passwords survive upgrades. Power Monitor runs without a separate Windows tray icon when launched by Tech Hub; the standalone Power Monitor module retains its own tray.
 
 See [third-party notices and source attribution](THIRD_PARTY.md).
 
@@ -151,15 +157,15 @@ The underlying servers listen only on `127.0.0.1` (default ports `18701–18706`
 
 ## Data, updates, and troubleshooting
 
-Use the dropdown at the top left of any service dashboard to switch directly to another enabled app. When opened through a `.local` name, it uses the destination app’s own hostname and omits port 80. IP and localhost views keep using the assigned service ports. Password-protected apps still require their own password. Signed-in administrators keep the current hostname when switching apps so their administrator session remains available. The master page appears in the switcher for local and signed-in remote administrators; D’san's full-screen presentation view hides the shared header.
+Use the dropdown at the top left of any service dashboard to switch directly to another enabled module. When opened through a `.local` name, it uses the destination module’s own hostname and omits port 80. IP and localhost views keep using the assigned service ports. Password-protected modules still require their own password. Signed-in administrators keep the current hostname when switching modules so their administrator session remains available. The master page appears in the switcher for local and signed-in remote administrators; D’san's full-screen presentation view hides the shared header.
 
-The master page's **Service enabled** switches stop and start individual apps. Disabled apps retain their configuration and disappear from the dropdown; this choice is saved for the next launch. Their public gateway stays available to show an “off” page, but their monitoring/control process is stopped.
+The master page's **Service enabled** switches stop and start individual modules. Disabled modules retain their configuration and disappear from the dropdown; this choice is saved for the next launch. Their public gateway stays available to show an “off” page, but their monitoring/control process is stopped.
 
-**Record Monitor** and **Router Panel** have an in-app **Settings** button when opened locally on the Tech Hub computer. Record Monitor opens its recorder setup, polling and control options. Router Panel opens its settings page (`/setup`) for saved routers, levels, categories, labels, visibility and profiles. Both apply settings live: only affected recorder connections, a changed router connection or a different active router reconnect. Saving never sends recording start/stop commands or router takes. Record Monitor uses red accents and Router Panel uses blue accents. These settings forms and the master configuration editor warn before discarding edits and reject saves from a window whose configuration has changed elsewhere.
+**Record Monitor** and **Router Panel** have an in-module **Settings** button when opened locally on the Tech Hub computer. Record Monitor opens its recorder setup, polling and control options. Router Panel opens its settings page (`/setup`) for saved routers, levels, categories, labels, visibility and profiles. Both apply settings live: only affected recorder connections, a changed router connection or a different active router reconnect. Saving never sends recording start/stop commands or router takes. Record Monitor uses red accents and Router Panel uses blue accents. These settings forms and the master configuration editor warn before discarding edits and reject saves from a window whose configuration has changed elsewhere.
 
 The master page's **Backup & troubleshooting** section exports password-encrypted configuration backups and restores them on the Tech Hub computer. Keep the export passphrase: it cannot be recovered. Automatic local snapshots retain the last ten distinct saved configurations; they contain credentials and are restricted to the local account. Backups cover the hub configuration and the active services’ saved configuration files and retained Lux settings, not logs or browser-local layouts. Restoring stops services; quit and reopen Tech Hub to load the restored configuration.
 
-**Troubleshooting** reports service health, data freshness and recent service errors. Its downloadable diagnostic report excludes device names, addresses, credentials and raw logs. Record Monitor marks data stale even when a status request stalls, and prevents overlapping browser polls. Service recovery and sign-in pages retain the app switcher.
+**Troubleshooting** reports service health, data freshness and recent service errors. Its downloadable diagnostic report excludes device names, addresses, credentials and raw logs. Record Monitor marks data stale even when a status request stalls, and prevents overlapping browser polls. Service recovery and sign-in pages retain the module switcher.
 
 Settings live in `~/Library/Application Support/Tech Hub/` on Mac and `%LOCALAPPDATA%\Streamline\Tech Hub\` on Windows:
 
@@ -169,11 +175,11 @@ Settings live in `~/Library/Application Support/Tech Hub/` on Mac and `%LOCALAPP
 
 Use the TH menu to open configuration or logs. To change ports, quit Tech Hub, edit `config.json`, and reopen it. All seven ports must be unique integers between 1024 and 65535. Set `host` to `127.0.0.1` for local-only service access or `0.0.0.0` for LAN access.
 
-Tech Hub checks GitHub for a newer desktop release at startup without delaying the services. When an update is available, the Mac app shows a notice and Windows shows a tray notification. Open **Check for Updates** in the TH menu or the **Tech Hub updates** section of the master page to see the installed and available versions and release notes for every newer version. Checks require internet access; offline operation of the services is unaffected. Companion-only releases and previews are excluded. Updates are downloaded and installed manually.
+Tech Hub checks GitHub for a newer desktop release at startup without delaying the services. When an update is available, the Mac module shows a notice and Windows shows a tray notification. Open **Check for Updates** in the TH menu or the **Tech Hub updates** section of the master page to see the installed and available versions and release notes for every newer version. Checks require internet access; offline operation of the services is unaffected. Companion-only releases and previews are excluded. Updates are downloaded and installed manually.
 
-Quit Tech Hub before replacing it. Saved configuration survives updates. The original standalone apps and their saved settings are left separate; Tech Hub does not automatically import them.
+Quit Tech Hub before replacing it. Saved configuration survives updates. The original standalone modules and their saved settings are left separate; Tech Hub does not automatically import them.
 
-Tech Hub runs while its menu-bar or system-tray app is open. It does not install a system daemon or enable login startup. Quitting the app stops its child services. Startup failures appear in the master page and logs. Network status indicates that a web service is running, not that physical show devices have been validated.
+Tech Hub runs while its menu-bar or system-tray module is open. It does not install a system daemon or enable login startup. Quitting the module stops its child services. Startup failures appear in the master page and logs. Network status indicates that a web service is running, not that physical show devices have been validated.
 
 ## Build from source
 
@@ -187,7 +193,7 @@ pnpm --dir services/netgear install --frozen-lockfile
 PYTHON_BINARY="$PWD/.venv/bin/python" bash scripts/build-mac.sh
 ```
 
-The build creates `dist/Tech Hub.app`, `dist/Tech-Hub-macOS-arm64.dmg`, and its checksum. Set `NODE_BINARY` or `GO_BINARY` to override compiler/runtime paths. The source retains the paused Lux Link app; releases include five active applications and their regression tests; their individual documentation remains under `services/`.
+The build creates `dist/Tech Hub.app`, `dist/Tech-Hub-macOS-arm64.dmg`, and its checksum. Set `NODE_BINARY` or `GO_BINARY` to override compiler/runtime paths. The source retains the paused Lux Link module; releases include five active applications and their regression tests; their individual documentation remains under `services/`.
 
 ```sh
 node --test tests/*.test.cjs

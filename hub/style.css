@@ -39,3 +39,5 @@
 #localAppReview{width:min(600px,calc(100vw - 24px));max-width:600px}.packageHash{overflow-wrap:anywhere;font-family:ui-monospace,monospace;font-size:12px}#localAppReview .serviceToggle input{width:22px;height:22px;position:static;opacity:1}
 
 #libraryDialog button:disabled,#localAppReview button:disabled{opacity:.45;cursor:not-allowed}
+
+.connectionBar{margin:0 5vw 24px;gap:16px}.connectionBar>span:first-child{min-width:0}.connectionBar>span:last-child{white-space:nowrap}@media(max-width:560px){.connectionBar{align-items:flex-start}.connectionBar>span:first-child{display:flex;align-items:baseline;gap:8px}.connectionBar .dot{flex-shrink:0;margin-right:0}}

@@ -1,10 +1,10 @@
 # Developing Tech Hub apps with AI tools
 
-This guide applies to Codex, Claude Code, Cursor, Copilot, and other coding assistants. Give your assistant the app contract and design guide before asking it to change code. AI-generated code has the same review and testing requirements as handwritten code.
+This guide applies to Codex, Claude Code, Cursor, Copilot, and other coding assistants. Give your assistant the module contract and design guide before asking it to change code. AI-generated code has the same review and testing requirements as handwritten code.
 
 ## 1. Give the assistant a precise task
 
-Start with a small vertical slice: connect to one simulated device, display one real measurement, and show disconnected/stale/error states. Provide the device model, protocol documentation, supported firmware, permitted commands, app ID, supported operating systems, and a sample sanitized response. State which operations are read-only and which change device state.
+Start with a small vertical slice: connect to one simulated device, display one real measurement, and show disconnected/stale/error states. Provide the device model, protocol documentation, supported firmware, permitted commands, module ID, supported operating systems, and a sample sanitized response. State which operations are read-only and which change device state.
 
 Do not let the assistant guess undocumented registers, ports, packet layouts, units, byte order, or device commands. Ask it to identify the official source and test against recorded fixtures. Unknown values must stay unknown; never synthesize healthy values when communication fails.
 
@@ -18,7 +18,7 @@ Replace the placeholders with actual requirements. Do not copy example addresses
 
 Create an `AGENTS.md` or the equivalent instruction file used by your tool. Include:
 
-- Stable app identity and supported Tech Hub/Node versions.
+- Stable module identity and supported Tech Hub/Node versions.
 - Commands for setup, development, validation, tests and packaging.
 - The SDK contract and design-guide paths.
 - Protocol references and fixture locations.
@@ -29,7 +29,7 @@ Create an `AGENTS.md` or the equivalent instruction file used by your tool. Incl
 
 ## 4. Keep changes reviewable
 
-Ask the assistant to inspect existing code before replacing it. Work on one behavior at a time. Preserve configuration compatibility and add migrations explicitly. Avoid unrelated formatting changes, dependency churn, custom authentication, duplicate app navigation, or a different visual framework for every app.
+Ask the assistant to inspect existing code before replacing it. Work on one behavior at a time. Preserve configuration compatibility and add migrations explicitly. Avoid unrelated formatting changes, dependency churn, custom authentication, duplicate module navigation, or a different visual framework for every module.
 
 Have the assistant list the files it changed and explain why. Review the diff yourself, particularly code that handles credentials, command execution, network destinations, firmware updates, formatting media, routing, power switching or recording controls.
 
@@ -37,7 +37,7 @@ Have the assistant list the files it changed and explain why. Review the diff yo
 
 Ask for fixtures covering connected, disconnected, timeout, malformed response, stale data, reconnect, and clean shutdown. For control actions, verify the exact command and require deliberate user action. Ensure repeated polling never overlaps uncontrollably and that retries have bounded timeouts and backoff.
 
-Validate app manifests, package paths, assets, entry points and version compatibility. Test from an unpacked package rather than only the development checkout. Test both target platforms before claiming support. Check the UI at desktop and phone widths and use keyboard navigation.
+Validate module manifests, package paths, assets, entry points and version compatibility. Test from an unpacked package rather than only the development checkout. Test both target platforms before claiming support. Check the UI at desktop and phone widths and use keyboard navigation.
 
 ## 6. Review design consistency
 
@@ -51,17 +51,17 @@ Run the validator, automated tests and package checks. Inspect package contents 
 
 ## 8. Useful review prompt
 
-> Review this app against the Tech Hub SDK contract. Focus on unsafe device commands, credential exposure, unbounded retries, overlapping polls, incorrect stale-data handling, configuration loss, path traversal, shell injection, and UI/access-control inconsistencies. Cite the affected file and behavior. Distinguish verified defects from assumptions. Do not contact real devices or modify production settings.
+> Review this module against the Tech Hub SDK contract. Focus on unsafe device commands, credential exposure, unbounded retries, overlapping polls, incorrect stale-data handling, configuration loss, path traversal, shell injection, and UI/access-control inconsistencies. Cite the affected file and behavior. Distinguish verified defects from assumptions. Do not contact real devices or modify production settings.
 
 ## Testing outside the catalog
 
-Package the app with `sdk/package.cjs`, then import the ZIP from App Library → Testing & evaluation. Review the app name, ID, version, declared access, and checksum before confirming. Use a distinct test ID instead of an official app ID. New apps require reopening the host once. Subsequent local package installs support the same version number for iterative development and retain a previous package for rollback. This is trusted-code execution under your account, not a sandbox; test unfamiliar apps on an isolated computer or VM. Catalog publication remains a separate reviewed step.
+Package the module with `sdk/package.cjs`, then import the ZIP from Module Library → Testing & evaluation. Review the module name, ID, version, declared access, and checksum before confirming. Use a distinct test ID instead of an official module ID. New modules require reopening the host once. Subsequent local package installs support the same version number for iterative development and retain a previous package for rollback. This is trusted-code execution under your account, not a sandbox; test unfamiliar modules on an isolated computer or VM. Catalog publication remains a separate reviewed step.
 
 ## Shared runtime review checklist
 
 - Use `TECH_HUB_RUNTIME_API` rather than duplicating runtime helpers or guessing an installation path.
 - Declare `runtime: "node"`, `runtimeAPI: 1`, `platforms: ["universal"]`, and `minHostVersion: "1.0.1"` or later.
-- Keep protocol-specific logic in the app; do not invent a new host engine or assume the private D’san/Power engines are a general-purpose Python/Go runtime.
+- Keep protocol-specific logic in the module; do not invent a new host engine or assume the private D’san/Power engines are a general-purpose Python/Go runtime.
 - Use the same package bytes on Mac and Windows; check case-sensitive imports and pure-JavaScript dependency portability.
 - Test actual failure behavior with fixtures. Host driver selection tests do not prove compatibility with physical hardware.
 - Preserve user settings outside the package and verify upgrade/rollback compatibility.

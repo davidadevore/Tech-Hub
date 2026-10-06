@@ -7,7 +7,7 @@
  if(document.querySelector('tech-hub-navigation')||/^\/full\/?$/.test(location.pathname))return;
  const host=document.createElement('tech-hub-navigation'),shadow=host.attachShadow({mode:'open'});
  const style=document.createElement('link');style.rel='stylesheet';style.href='/__hub/chrome.css';
- shadow.append(style);const bar=document.createElement('div');bar.className='bar';const brand=document.createElement('span');brand.className='brand';brand.textContent='TH';const picker=document.createElement('label');picker.className='picker';const select=document.createElement('select');select.setAttribute('aria-label','Switch application');picker.append(select);const settings=document.createElement('button');settings.textContent='Settings';settings.hidden=true;bar.append(brand,picker,settings);shadow.append(bar);
+ shadow.append(style);const bar=document.createElement('div');bar.className='bar';const brand=document.createElement('span');brand.className='brand';brand.textContent='TH';const picker=document.createElement('label');picker.className='picker';const select=document.createElement('select');select.setAttribute('aria-label','Switch module');picker.append(select);const settings=document.createElement('button');settings.textContent='Settings';settings.hidden=true;bar.append(brand,picker,settings);shadow.append(bar);
  let state,signature='',dirty=false,revision=null;
  window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
  function discard(){return !dirty||confirm('Discard unsaved settings?');}

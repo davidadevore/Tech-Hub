@@ -24,7 +24,7 @@ test('short hostname routes retain password, disabled, origin and local-only gat
   assert.equal(JSON.parse((await request(port,'pd.local')).text).service,'power');
   assert.equal((await request(port,'record.local','/__hub/settings')).status,403);
   assert.equal((await request(port,'tech.local','/api/status')).status,404);
-  assert.match((await request(port,'tech.local')).text,/Choose an application/);
+  assert.match((await request(port,'tech.local')).text,/Choose a module/);
   assert.equal((await request(port,'dsan.local','/','GET',undefined,{Origin:'http://evil.invalid'})).status,403);
   assert.equal((await post('/api/access',{id:'dsan',password:'fixture-password'})).status,200);
   assert.equal((await request(port,'dsan.local')).status,401);
@@ -48,7 +48,7 @@ test('short hostname routes retain password, disabled, origin and local-only gat
   assert.equal((await request(port,'dsan1-stage1.local')).status,401);
   assert.equal(JSON.parse((await request(port,'power1-stage1.local')).text).service,'power');
   assert.equal((await request(port,'tech-stage1.local')).status,421);
-  assert.match((await request(port,'show-stage1.local')).text,/Choose an application/);
+  assert.match((await request(port,'show-stage1.local')).text,/Choose a module/);
   const navigation=JSON.parse((await request(port,'power1-stage1.local','/__hub/navigation')).text);
   assert.match(navigation.services.find(s=>s.id==='power').hostnameURL,/power1-stage1\.local/);
   assert.equal((await post('/api/naming',{suffix:'stage1',portless:false})).status,200);
