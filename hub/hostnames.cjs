@@ -13,14 +13,15 @@ function bonjour(onError){
  return instance;
 }
 const aliases={master:'tech',dsan:'dsan',lux:'lux',power:'pd',netgear:'netgear',record:'record',ultrix:'router'};
-function validateNaming(value={suffix:'',portless:true}){
+function validateNaming(value={suffix:'',portless:true},serviceIds=[]){
+ const allowed={...aliases};for(const id of serviceIds)if(!Object.hasOwn(allowed,id)&&/^[a-z][a-z0-9-]{1,39}$/.test(id))allowed[id]=('app-'+id).slice(0,30).replace(/-$/,'');
  if(!value||typeof value.suffix!=='string'||typeof value.portless!=='boolean')throw Error('Choose a machine identifier and port-free setting.');
  const suffix=value.suffix.trim().toLowerCase();
  if(suffix&&!/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(suffix))throw Error('Use up to 32 letters, numbers or hyphens; start and end with a letter or number.');
  if(value.names!==undefined&&(!value.names||typeof value.names!=='object'||Array.isArray(value.names)))throw Error('Service names must be an object.');
- if(Object.keys(value.names||{}).some(id=>!Object.hasOwn(aliases,id)))throw Error('Unknown service name.');
+ if(Object.keys(value.names||{}).some(id=>!Object.hasOwn(allowed,id)))throw Error('Unknown service name.');
  const names={},used=new Set();
- for(const [id,fallback] of Object.entries(aliases)){
+ for(const [id,fallback] of Object.entries(allowed)){
   const input=value.names?.[id]??fallback;
   if(typeof input!=='string')throw Error('Enter a hostname for each service.');
   const name=input.trim().toLowerCase().replace(/\.local$/,'');

@@ -23,10 +23,13 @@ Copy-Item package.json "$resources/package.json"
 Push-Location services/netgear
 try { Checked { node node_modules/next/dist/bin/next build } } finally { Pop-Location }
 Checked { node scripts/bundle-services.cjs $resources }
+Checked { node scripts/package-apps.cjs $resources }
 $compiler = "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe"
 if (!(Test-Path $compiler)) { throw 'Install Inno Setup 6 before building the installer.' }
 Checked { & $compiler "/DAppVersion=$version" scripts/windows-installer.iss }
-Get-ChildItem dist/Tech-Hub-Windows-x64-Setup.exe | ForEach-Object {
+Copy-Item dist/app-packages-win32-x64 "$resources/offline-apps" -Recurse
+Checked { & $compiler "/DAppVersion=$version" '/DOutputName=Tech-Hub-Windows-x64-Full-Setup' scripts/windows-installer.iss }
+Get-ChildItem dist/Tech-Hub-Windows-x64-*.exe | ForEach-Object {
     $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
     "$hash  $($_.Name)" | Set-Content "$($_.FullName).sha256" -Encoding ascii
 }

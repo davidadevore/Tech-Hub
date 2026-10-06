@@ -10,3 +10,7 @@ NETGEAR's runtime dependencies retain their own licenses in their package direct
 # LAN hostname discovery
 
 Tech Hub bundles [bonjour-service](https://github.com/onlxltd/bonjour-service) (MIT) and its dependencies for Bonjour/mDNS service advertisements. Dependency license files are included alongside the bundled modules.
+
+## adm-zip
+
+App archive creation and validation use adm-zip 0.6.1 (MIT). Its license is included with the bundled dependency. Source: https://github.com/cthackers/adm-zip

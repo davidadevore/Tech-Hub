@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
 const {snapshot}=require('./backups.cjs');
-const validationPath=fs.existsSync(path.join(__dirname,'../services/ultrix/src/validate-config.cjs'))?'../services/ultrix/src/validate-config.cjs':'../ultrix/src/validate-config.cjs';
+const validationPath=fs.existsSync(path.join(__dirname,'../services/ultrix/src/validate-config.cjs'))?'../services/ultrix/src/validate-config.cjs':'./router-validation.cjs';
 const {validateRouterPanel,migrate}=require(validationPath);
 const defaults={
  record:{devices:[],pollIntervalMs:2000,warnFreePercent:20,criticalFreePercent:10,controlEnabled:true,controlLocalOnly:true,confirmStop:true,allowFormat:false},

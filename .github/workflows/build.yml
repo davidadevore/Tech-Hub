@@ -44,8 +44,10 @@ jobs:
         with:
           name: windows-installer
           path: |
-            dist/Tech-Hub-Windows-x64-Setup.exe
-            dist/Tech-Hub-Windows-x64-Setup.exe.sha256
+            dist/Tech-Hub-Windows-x64-*.exe*
+            dist/Tech-Hub-All-Apps-win32-x64.zip
+            dist/catalog-win32-x64.json
+            dist/app-packages-win32-x64/*.zip
   mac:
     runs-on: macos-15
     steps:
@@ -76,8 +78,10 @@ jobs:
         with:
           name: mac-installer
           path: |
-            dist/Tech-Hub-macOS-arm64.dmg
-            dist/Tech-Hub-macOS-arm64.dmg.sha256
+            dist/Tech-Hub-macOS-arm64*.dmg*
+            dist/Tech-Hub-All-Apps-darwin-arm64.zip
+            dist/catalog-darwin-arm64.json
+            dist/app-packages-darwin-arm64/*.zip
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [windows, mac]
@@ -90,6 +94,15 @@ jobs:
         with:
           path: installers
           merge-multiple: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --ignore-scripts
+      - name: Prepare catalog and SDK
+        run: |
+          find installers -mindepth 2 -type f -name '*.zip' -exec mv {} installers/ \;
+          find installers -mindepth 1 -type d -empty -delete
+          node scripts/release-catalog.cjs installers
       - name: Publish installers together
         env:
           GH_TOKEN: ${{ github.token }}

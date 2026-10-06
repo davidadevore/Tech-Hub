@@ -1,6 +1,9 @@
 #ifndef AppVersion
   #define AppVersion "0.2.0"
 #endif
+#ifndef OutputName
+  #define OutputName "Tech-Hub-Windows-x64-Setup"
+#endif
 [Setup]
 AppId={{A184D150-AB12-45D2-8C91-E6B77CE40510}
 AppName=Tech Hub
@@ -16,12 +19,20 @@ MinVersion=10.0.17763
 AppMutex=Local\StreamlineTechHub
 UninstallDisplayIcon={app}\Tech Hub.exe
 OutputDir=..\dist
-OutputBaseFilename=Tech-Hub-Windows-x64-Setup
+OutputBaseFilename={#OutputName}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 SetupIconFile=..\assets\TechHub.ico
 CloseApplications=no
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\resources\offline-apps"
+Type: filesandordirs; Name: "{app}\resources\dsan"
+Type: filesandordirs; Name: "{app}\resources\lux"
+Type: filesandordirs; Name: "{app}\resources\netgear"
+Type: filesandordirs; Name: "{app}\resources\record"
+Type: filesandordirs; Name: "{app}\resources\ultrix"
+Type: files; Name: "{app}\resources\power-server.exe"
 [Files]
 Source: "..\dist\windows\Tech Hub\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]

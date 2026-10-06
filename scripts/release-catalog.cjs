@@ -1,0 +1,8 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),Zip=require('adm-zip');
+const dir=path.resolve(process.argv[2]||'installers'),apps=new Map();
+for(const platform of ['darwin-arm64','win32-x64']){const file=path.join(dir,`catalog-${platform}.json`),catalog=JSON.parse(fs.readFileSync(file));for(const a of catalog.apps){const old=apps.get(a.id);if(old){if(old.version!==a.version)throw Error('Platform app version mismatch');Object.assign(old.packages,a.packages);}else apps.set(a.id,a);}fs.unlinkSync(file);}
+for(const a of apps.values())for(const p of Object.values(a.packages)){const bytes=fs.readFileSync(path.join(dir,path.basename(new URL(p.url).pathname)));if(bytes.length!==p.size||crypto.createHash('sha256').update(bytes).digest('hex')!==p.sha256)throw Error('Release package does not match catalog');}
+fs.writeFileSync(path.join(dir,'tech-hub-catalog.json'),JSON.stringify({schemaVersion:1,apps:[...apps.values()]},null,2));
+const sdk=new Zip();sdk.addLocalFolder('sdk','sdk');sdk.addLocalFile('hub/app-package.cjs','hub');sdk.addFile('package.json',Buffer.from(JSON.stringify({name:'tech-hub-sdk',version:require('../package.json').version,private:true,dependencies:{'adm-zip':'0.6.1'}})));sdk.addFile('README.txt',Buffer.from('Install Node.js 24, run npm install in this folder, then read sdk/README.md. No hardware is contacted by validation or packaging.'));sdk.writeZip(path.join(dir,'Tech-Hub-SDK.zip'));
+for(const name of fs.readdirSync(dir))if(/\.(zip|dmg|exe)$/.test(name))fs.writeFileSync(path.join(dir,name+'.sha256'),crypto.createHash('sha256').update(fs.readFileSync(path.join(dir,name))).digest('hex')+'  '+name+'\n');

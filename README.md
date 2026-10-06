@@ -1,10 +1,26 @@
 # Tech Hub
 
-One desktop application for **D’san Ready**, **Lux Link**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, and **Router Panel**. Tech Hub runs all six services and provides a local master page with their status, ports, and shareable network URLs.
+One desktop application for **D’san Ready**, **Lux Link**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, and **Router Panel**. Install only the apps you need, or choose the Full download with all six pre-installed. Tech Hub provides a local master page with their status, ports, and shareable network URLs.
 
 ## Downloads
 
-Current desktop release: **0.7.1**. See the [changelog](CHANGELOG.md) for Settings, optional network administration, and Connected Devices.
+Version **1.0.0** introduces the App Library and developer SDK. See the [changelog](CHANGELOG.md).
+
+| Download | macOS (Apple silicon) | Windows (x64) |
+| --- | --- | --- |
+| **Tech Hub Host** — choose apps after installation | [Host installer](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64.dmg) | [Host installer](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Setup.exe) |
+| **Tech Hub Full** — all six apps included, no app downloads needed | [Full installer](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64-Full.dmg) | [Full installer](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Full-Setup.exe) |
+| **Download all apps** — offline bundle for an existing host | [All Mac apps ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps-darwin-arm64.zip) | [All Windows apps ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps-win32-x64.zip) |
+
+Open **App Library** in the master page to install individual apps, **Install selected**, or **Install all apps**. Full installers unpack their included apps on first launch. To use an all-apps ZIP, choose **App Library → Offline installation → Install offline bundle**. The ZIP must match the official catalog shipped with the host or a refreshed catalog. Do not extract it first. All installed apps remain available offline.
+
+Upgrading from 0.x retains service settings, passwords, and ports. The Host installer offers **Install previously enabled apps**; the Full installer includes all apps and respects saved enabled/disabled settings. Once an app is installed, its service slider controls whether it runs and appears in shared navigation. App updates and rollback are separate from host updates. Uninstall removes app files while retaining settings. A newly added third-party app requires reopening Tech Hub once; the six official apps activate immediately.
+
+### Develop an app
+
+[Download the SDK](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-SDK.zip) · [SDK documentation](sdk/README.md) · [AI development instructions](sdk/AI-DEVELOPMENT.md) · [Design guide](sdk/DESIGN.md)
+
+The SDK includes a working starter app, manifest validator, package builder, visual conventions, and prompts/checklists for developers using AI tools. **Testing outside the catalog:** open **App Library → Testing & evaluation**, choose an app ZIP, review its details, and confirm installation. Unofficial apps are clearly labeled and support manual updates, rollback, and uninstall with settings retained. Use a unique app ID; local packages cannot overwrite official apps. Reopen Tech Hub once to load a newly added app. App submissions are reviewed before inclusion in the official catalog. Apps run as the signed-in user; permission declarations are not an OS sandbox.
 
 ### Companion module
 
@@ -30,11 +46,11 @@ The Windows installer installs for the current user and preserves settings durin
 
 [Release notes and all downloads](https://github.com/horner516/Tech-Hub/releases/latest) · [SHA-256 checksum](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64.dmg.sha256)
 
-Requires **macOS 13 or later on an Apple silicon Mac (M1 or later)**. Intel Macs are not supported by this installer. Python, Node.js, and the Power Monitor binary are bundled; no development tools are needed to run it.
+Requires **macOS 13 or later on an Apple silicon Mac (M1 or later)**. Intel Macs are not supported by this installer. Node.js is included in the host; app packages include their required runtimes; no development tools are needed to run it.
 
 1. Open the DMG and drag **Tech Hub** into **Applications**.
 2. Open Tech Hub. Click **TH** in the menu bar, then **Open Master Page**.
-3. Add your devices in each service. New installations start with empty device lists.
+3. Open App Library to install selected apps (or use the Full installer), then add your devices in each service. New installations start with empty device lists.
 4. Copy the service’s network URL from the master page to share with your crew.
 
 This initial build is **ad-hoc signed, not Apple Developer ID signed or notarized**. macOS may require **System Settings → Privacy & Security → Open Anyway** on first launch. See [installation details](INSTALL.md).

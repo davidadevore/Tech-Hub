@@ -34,13 +34,21 @@ mkdir -p "$reader/Contents/MacOS"
 /usr/bin/clang -fobjc-arc -mmacosx-version-min=13.0 services/lux/native-mac/MAWebRemoteReader.m -o "$reader/Contents/MacOS/MA Web Remote Reader" -framework AppKit -framework Foundation -framework Vision -framework WebKit
 cp services/lux/native-mac/MAWebRemoteReader-Info.plist "$reader/Contents/Info.plist"
 /usr/bin/codesign --force --deep --sign - "$app"
-/usr/bin/codesign --verify --deep --strict "$app"
-staging="$project_dir/build/dmg-root"
-if [[ -d "$staging" ]]; then rm -rf "$staging"; fi
-mkdir -p "$staging"
-cp -R "$app" "$staging/"
-ln -s /Applications "$staging/Applications"
-cp INSTALL.md "$staging/Install Tech Hub.txt"
-/usr/bin/hdiutil create -volname "Tech Hub $version" -fs HFS+ -srcfolder "$staging" -ov -format UDZO "$project_dir/dist/Tech-Hub-macOS-arm64.dmg"
-(cd dist && shasum -a 256 Tech-Hub-macOS-arm64.dmg > Tech-Hub-macOS-arm64.dmg.sha256)
-echo "Built $project_dir/dist/Tech-Hub-macOS-arm64.dmg"
+"$NODE_BINARY" scripts/package-apps.cjs "$resources"
+make_dmg() {
+  local filename="$1"
+  /usr/bin/codesign --force --deep --sign - "$app"
+  /usr/bin/codesign --verify --deep --strict "$app"
+  local staging="$project_dir/build/dmg-root"
+  if [[ -d "$staging" ]]; then rm -rf "$staging"; fi
+  mkdir -p "$staging"
+  cp -R "$app" "$staging/"
+  ln -s /Applications "$staging/Applications"
+  cp INSTALL.md "$staging/Install Tech Hub.txt"
+  /usr/bin/hdiutil create -volname "Tech Hub $version" -fs HFS+ -srcfolder "$staging" -ov -format UDZO "$project_dir/dist/$filename"
+  (cd dist && shasum -a 256 "$filename" > "$filename.sha256")
+}
+make_dmg Tech-Hub-macOS-arm64.dmg
+cp -R dist/app-packages-darwin-arm64 "$resources/offline-apps"
+make_dmg Tech-Hub-macOS-arm64-Full.dmg
+echo "Built host and full macOS installers."

@@ -20,3 +20,8 @@ Mac. HTTP is unencrypted; use a trusted show network.
 Quit Tech Hub from the TH menu before replacing the app with an update.
 Configuration is stored in ~/Library/Application Support/Tech Hub and survives
 app updates. The menu provides shortcuts to configuration and logs.
+
+
+## Tech Hub 1.0 app choices
+
+Choose Host for a smaller download and install apps from App Library. Choose Full to include all six official apps without internet access. The all-apps ZIP can also be imported through App Library on an existing host; use the ZIP for your platform and host catalog version. The Full installer retains previously disabled services. App updates and uninstall preserve settings. Existing 0.x installations can use Install previously enabled apps after a Host upgrade. Quit Tech Hub before replacing the desktop application.

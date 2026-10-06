@@ -33,3 +33,9 @@
 .hostnameFields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px}.hostnameFields label{display:flex;flex-direction:column;gap:8px;min-width:0}.hostnameFields input{width:100%;min-width:0}
 
 #settingsDialog,#devicesDialog{width:min(850px,94vw);max-width:94vw;max-height:90dvh;overflow:auto}#adminPassword{width:100%;max-width:420px}#adminAccessURLs p{overflow-wrap:anywhere;font-family:ui-monospace,monospace}#settingsDialog .serviceToggle{align-items:center}#settingsDialog .serviceSlider{flex-shrink:0}#settingsDialog #networkNames{margin-bottom:0}.deviceRow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;padding:16px 0;border-bottom:1px solid var(--line)}.deviceRow code{overflow-wrap:anywhere}#logoutForm{margin:0}header .actions{flex-wrap:wrap}#updates{margin-top:24px}@media(max-width:650px){header{height:auto;min-height:106px;padding-top:18px;padding-bottom:18px;flex-wrap:wrap;gap:16px}.deviceRow{grid-template-columns:1fr}.updateHeading{flex-wrap:wrap;gap:12px}}
+
+#libraryDialog{width:min(900px,calc(100vw - 24px));max-width:900px}#libraryApps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin:20px 0}.libraryCard{padding:18px;border:1px solid #28434d;border-radius:10px}.librarySelect{display:flex;gap:12px;align-items:center}.librarySelect input{width:22px;height:22px;margin:0}.libraryCard .actions{flex-wrap:wrap}.libraryCard p{overflow-wrap:anywhere}#libraryDialog>.actions{flex-wrap:wrap}
+
+#localAppReview{width:min(600px,calc(100vw - 24px));max-width:600px}.packageHash{overflow-wrap:anywhere;font-family:ui-monospace,monospace;font-size:12px}#localAppReview .serviceToggle input{width:22px;height:22px;position:static;opacity:1}
+
+#libraryDialog button:disabled,#localAppReview button:disabled{opacity:.45;cursor:not-allowed}

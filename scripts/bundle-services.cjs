@@ -32,5 +32,8 @@ function hubDependency(name,from){
  for(const child of Object.keys(data.dependencies||{}))hubDependency(child,path.dirname(manifest));
 }
 hubDependency('bonjour-service',root);
+hubDependency('adm-zip',root);
 copy(path.join(root,'THIRD_PARTY.md'),path.join(destination,'THIRD_PARTY.md'));
 console.log('Bundled NETGEAR AV Switchboard, Record Monitor, and Router Panel.');
+
+copy(path.join(root,'services/ultrix/src/validate-config.cjs'),path.join(destination,'hub/router-validation.cjs'));
