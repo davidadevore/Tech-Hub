@@ -53,6 +53,14 @@ Existing v1.0.0 modules continue to work (except paused Lux Link); use Module Li
 
 The SDK includes a [shared-runtime guide](sdk/SHARED-RUNTIME.md), a working starter module, manifest validator, package builder, visual conventions, and prompts/checklists for developers using AI tools. **Testing outside the catalog:** open **Module Library → Testing & evaluation**, choose a module ZIP, review its details, and confirm installation. Unofficial modules are clearly labeled and support manual updates, rollback, and uninstall with settings retained. Use a unique module ID; local packages cannot overwrite official modules. Reopen Tech Hub once to load a newly added module. Module submissions are reviewed before inclusion in the official catalog. Modules run as the signed-in user; permission declarations are not an OS sandbox.
 
+### R-Too — new module
+
+Read-only d&b amplifier monitoring based on [Devore’s D80-Panel](https://github.com/davidadevore/D80-Panel): fleet status, input/output meters, channel details, and fault acknowledgement.
+
+[Download R-Too 1.0.0](https://github.com/horner516/Tech-Hub/releases/download/rtoo-v1.0.0/techhub-app-rtoo-1.0.0-universal.zip) · [Setup and source](services/rtoo/README.md)
+
+For current Tech Hub 1.0.1/1.0.2 installations, import the ZIP through **Module Library → Testing & evaluation**, then reopen Tech Hub. The imported module is labeled unofficial because it was installed manually. Open **R-Too → Settings** to enable discovery or enter amplifier addresses. No amplifier connections are made by default. Catalog and Full installer inclusion are prepared for the next host build; the current v1.0.2 installers still include the original five modules.
+
 ### Companion module
 
 **[Download the offline Companion module — v1.0.3](https://github.com/horner516/Tech-Hub/releases/download/companion-v1.0.3/streamline-techhub-1.0.3.tgz)**

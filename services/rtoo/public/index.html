@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>R-Too · Tech Hub</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #071015;
+    --card: #102027;
+    --border: #29434c;
+    --text: #e8ebee;
+    --muted: #8a92a0;
+    --ok: #2ecc71;
+    --warn: #f5c518;
+    --bad: #ff3b3b;
+    --accent: #eab308;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; }
+
+  #banner {
+    position: sticky; top: 0; z-index: 10;
+    padding: 14px 16px calc(14px + env(safe-area-inset-top, 0px));
+    padding-top: max(14px, env(safe-area-inset-top));
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: #1c2027;
+    color: var(--muted);
+    transition: background 120ms linear, color 120ms linear;
+  }
+  #banner.ok { background: #123321; color: var(--ok); }
+  #banner.warn { background: #3a2f0a; color: var(--warn); }
+  #banner.bad { background: var(--bad); color: #fff; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+
+  #summary {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    padding: 10px 16px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border);
+  }
+  #summary b { color: var(--text); }
+  #summary .bad-count { color: var(--bad); }
+  #summary .warn-count { color: var(--warn); }
+
+  main { padding: 12px; max-width: 1600px; margin: 0 auto; }
+
+  #tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  #tabs button {
+    flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--muted);
+    padding: 9px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  #tabs button.active { color: var(--text); border-color: var(--accent); background: #16223a; }
+
+  #meterModeToggle { display: flex; gap: 6px; margin-bottom: 14px; }
+  #meterModeToggle button {
+    background: var(--card); border: 1px solid var(--border); color: var(--muted);
+    padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  #meterModeToggle button.active { color: var(--text); border-color: var(--accent); background: #16223a; }
+
+  /* ---- Fleet grid ---- */
+  .group { margin-bottom: 18px; }
+  .group h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+    margin: 0 0 8px 2px; font-weight: 600;
+  }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px;
+  }
+  .tile {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 8px; text-align: center; cursor: pointer; user-select: none;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    transition: transform 80ms ease, border-color 120ms ease;
+  }
+  .tile:active { transform: scale(0.96); }
+  .tile .dots { display: flex; gap: 4px; }
+  .tile .dot { width: 9px; height: 9px; border-radius: 50%; background: #3a3f47; }
+  .tile .dot.ok { background: var(--ok); box-shadow: 0 0 5px var(--ok); }
+  .tile .dot.warn { background: var(--warn); box-shadow: 0 0 5px var(--warn); }
+  .tile .dot.bad { background: var(--bad); box-shadow: 0 0 6px var(--bad); animation: pulse 1s infinite; }
+  .tile .dot.muted { background: transparent; border: 1.5px solid var(--muted); }
+  .tile .id { font-weight: 700; font-size: 13px; }
+  .tile.error-bg { background: rgba(255, 59, 59, 0.22); border-color: var(--bad); }
+
+  /* ---- Meters page ---- */
+  .meter-group {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; margin-bottom: 10px;
+  }
+  .meter-header {
+    display: flex; align-items: center; gap: 6px; padding: 4px 8px; width: max-content;
+    font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  .meter-header .meter-amp-id { width: 36px; flex-shrink: 0; }
+  .meter-header .meter-channels { display: flex; gap: 3px; }
+  .meter-header .meter-channels span { width: 26px; text-align: center; }
+  /* Each "column" is its own block with its own header + a fixed number of
+     rows, then blocks just wrap via flexbox — plain CSS multi-column text
+     flow only ever prints ONE shared header, not one per column, which
+     looked broken once there was more than one. Wrapping repeats it
+     correctly: several blocks side by side on a wide monitor, one per row
+     on a phone, no media queries. */
+  .meter-cols { display: flex; flex-wrap: wrap; }
+  .meter-col { width: max-content; }
+  .meter-col + .meter-col { border-left: 1px solid var(--border); }
+  .meter-row {
+    display: flex; align-items: center; gap: 6px; padding: 3px 8px;
+    border-bottom: 1px solid var(--border); cursor: pointer; width: max-content;
+  }
+  .meter-row:last-child { border-bottom: none; }
+  .meter-row:active { background: #1a1e25; }
+  .meter-amp-id { font-weight: 700; font-size: 10px; width: 36px; flex-shrink: 0; }
+  .meter-channels { display: flex; gap: 3px; }
+  .seg-meter { position: relative; display: flex; flex-direction: column-reverse; gap: 1px; width: 26px; height: 40px; }
+  .seg-meter.muted .seg { opacity: 0.22; }
+  .seg-meter.muted::after {
+    content: 'M'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: var(--text); opacity: 0.85;
+  }
+  .seg-meter .seg { flex: 1; border-radius: 1px; background: #20242b; }
+  .seg-meter .seg.green { background: var(--ok); }
+  .seg-meter .seg.yellow { background: var(--warn); }
+  .seg-meter .seg.red { background: var(--bad); }
+  .seg-meter .seg.flash { animation: pulse 0.6s infinite; }
+
+  /* ---- Detail view ---- */
+  #backbtn {
+    display: flex; align-items: center; gap: 6px; background: none; border: none; color: var(--accent);
+    font-size: 15px; padding: 6px 2px; margin-bottom: 10px; cursor: pointer;
+  }
+  .amp {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+  }
+  .amp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+  }
+  .amp-head .title { font-weight: 600; font-size: 15px; }
+  .amp-head .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .headdot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 6px; }
+  .headdot.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .headdot.off { background: var(--bad); }
+
+  .err-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; background: rgba(255, 59, 59, 0.12); border-bottom: 1px solid var(--border);
+    font-size: 13px; color: var(--bad);
+  }
+  .err-row.muted { background: transparent; color: var(--muted); }
+  .ignore-btn {
+    background: none; border: 1px solid var(--border); color: inherit;
+    font-size: 11px; padding: 4px 10px; border-radius: 8px; cursor: pointer;
+  }
+  .muted-badge { font-size: 11px; color: var(--bad); opacity: 0.5; }
+
+  .ch.is-muted .meter-fill { opacity: 0.25; }
+  .ch { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .ch:last-child { border-bottom: none; }
+  .ch-row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .ch-name { font-weight: 600; font-size: 14px; }
+  .ch-name .muted-tag {
+    color: var(--text); background: #2a2f38; border: 1px solid var(--border); border-radius: 6px;
+    font-weight: 700; font-size: 10px; letter-spacing: 0.05em; padding: 2px 6px; margin-left: 8px; vertical-align: middle;
+  }
+  .flags { display: flex; gap: 6px; }
+  .flag {
+    font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px;
+    background: #23262d; color: var(--muted); letter-spacing: 0.03em;
+  }
+  .flag.on-ovl { background: var(--bad); color: #fff; }
+  .flag.on-gr { background: var(--warn); color: #2a2100; }
+  .flag.on-sig { background: #1f3a2b; color: var(--ok); }
+
+  .meter-track { height: 10px; border-radius: 6px; background: #23262d; overflow: hidden; }
+  .meter-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--ok)); width: 0%; transition: width 150ms linear; }
+  .meter-fill.hot { background: linear-gradient(90deg, var(--warn), var(--bad)); }
+  .ch-stats { display: flex; gap: 14px; margin-top: 6px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .ch-stats b { color: var(--text); font-weight: 600; }
+
+  #empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+
+  .module-header{display:flex;justify-content:space-between;align-items:center;padding:24px max(16px,4vw);gap:16px;border-bottom:1px solid var(--border)}
+  h1{margin:0;font-size:28px;letter-spacing:-.04em}.eyebrow{color:var(--accent);font-size:11px;letter-spacing:.18em;text-transform:uppercase;margin:0 0 8px}
+  .module-header p:last-child{color:var(--muted);margin-bottom:0;font-size:14px}
+  .module-header button,dialog button{border:1px solid var(--border);background:var(--card);color:var(--text);padding:12px 16px;border-radius:9px;cursor:pointer}
+  #banner{position:static}#settingsDialog{width:min(540px,94vw);max-height:85vh;overflow:auto;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:24px}
+  dialog::backdrop{background:#000a}dialog textarea{width:100%;min-height:150px;background:var(--card);color:var(--text);border:1px solid var(--border);padding:12px;border-radius:8px;font:inherit}
+  dialog label{display:block;margin:20px 0 10px}dialog p{color:var(--muted);line-height:1.5}dialog .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}#saveSettings{background:var(--accent);color:#111;border-color:var(--accent)}
+  #settingsError,#actionError{color:#ff7a7a}#actionError{margin:0;padding:0 16px}#actionError:empty{display:none}footer{padding:28px 16px;text-align:center;color:var(--muted);font-size:12px}
+  button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  @media(max-width:480px){.module-header{padding:20px 16px;align-items:flex-start}.module-header p:last-child{max-width:220px}h1{font-size:26px}}
+</style>
+</head>
+<body>
+  <header class="module-header"><div><p class="eyebrow">Amplifier monitoring</p><h1>R-Too</h1><p>d&amp;b fleet status, meters and faults · Read only</p></div><button id="openSettings" hidden>Settings</button></header>
+  <p id="actionError" role="alert"></p>
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle"><h2 id="settingsTitle">R-Too settings</h2><p>Changes apply immediately. Amplifiers reconnect when settings are saved.</p>
+  <label><input id="discoveryEnabled" type="checkbox"> Discover d&amp;b amplifiers on this network</label>
+  <p>Uses OCA mDNS advertisements. If your network blocks discovery, add addresses below.</p>
+  <label for="manualHosts">Amplifier addresses — one per line</label><textarea id="manualHosts" spellcheck="false" placeholder="10.1.1.150:30013&#10;10.1.1.151:50014"></textarea>
+  <p>Without a port, 30013 is used. The upstream project reports 50014 on D40 units; use the amplifier’s configured OCA port.</p>
+  <p id="settingsError" role="alert"></p><div class="actions"><button id="closeSettings">Cancel</button><button id="saveSettings">Save settings</button></div></dialog>
+  <div id="banner">Connecting…</div>
+  <div id="summary"></div>
+  <main id="app"></main>
+
+<footer>Based on Devore’s D80-Panel · Not affiliated with d&amp;b audiotechnik</footer>
+<script>
+const appEl = document.getElementById('app');
+const bannerEl = document.getElementById('banner');
+const summaryEl = document.getElementById('summary');
+
+let latestAmps = {};
+let isAdmin=false, discoveryEnabled=false, discoveryError=null, feedOnline=false;
+let view = 'fleet'; // 'fleet' | 'meters' | <serial>
+
+function fmt(n, digits = 1) {
+  if (n === undefined || n === null || Number.isNaN(n)) return '–';
+  return Number(n).toFixed(digits);
+}
+
+// Amp/channel names come from the network (mDNS TXT records, OCA channel
+// name objects) — they're not trusted input. Escape before ever putting
+// them in innerHTML, since a rogue device could otherwise inject markup
+// that runs in every browser viewing the dashboard.
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+const ERROR_FLAG_LABELS = {
+  generalError: 'General error',
+  deviceError: 'Device error',
+  ampError: 'Amp error',
+  smpsError: 'SMPS error',
+};
+
+// Device-level error flags that are currently true AND not on this amp's
+// suppression list. Suppressing is per (amp, flag), set from the detail
+// view, and only clears when the server process restarts — see
+// setFlagSuppressed() server-side.
+function activeErrorFlags(amp) {
+  const s = amp.status || {};
+  const suppressed = amp.suppressedFlags || [];
+  return Object.keys(ERROR_FLAG_LABELS).filter((key) => s[key] && !suppressed.includes(key));
+}
+
+// True error flags that ARE currently suppressed (for the muted-indicator).
+function suppressedActiveFlags(amp) {
+  const s = amp.status || {};
+  const suppressed = amp.suppressedFlags || [];
+  return suppressed.filter((key) => s[key]);
+}
+
+function ampSeverity(amp) {
+  if (!amp.connected) return 'off';
+  if (activeErrorFlags(amp).length > 0) return 'bad';
+  let hasOvl = false, hasLim = false;
+  for (const ch of amp.channels || []) {
+    if (ch.overload || ch.inputOverload || ch.outputOverload) hasOvl = true;
+    if (ch.limiting) hasLim = true;
+  }
+  if (hasOvl) return 'bad';
+  if (hasLim) return 'warn';
+  return 'ok';
+}
+
+// short id from a device name like "D80 1.12" or a custom name like "Delay IN 4.03"
+function shortId(amp) {
+  const name = amp.deviceName || amp.serial;
+  const m = /(\d+\.\d+)\s*$/.exec(name);
+  return m ? m[1] : name;
+}
+
+// Per-channel signal light: green on signal, yellow the moment gain
+// reduction engages, red on a clip/overload (each overrides the last).
+// Green uses OSP (true output into a load) when the amp reports it, but
+// falls back to a more sensitive read of the raw input level, since OSP
+// needs both unmuted AND a connected speaker load, and the amp's own ISP
+// flag only trips above -30dBu — real program material was sitting at
+// -32..-38dBu on this rig, audibly present but below that threshold.
+// Muted renders as a distinct hollow ring rather than any of those colors
+// — otherwise a muted channel with real input signal upstream would still
+// show green, which reads as "active" when nothing's actually coming out.
+// Overload still wins over muted: a real fault is worth flagging either way.
+const SIGNAL_THRESHOLD_DBU = -50;
+function channelDotClass(ch, connected) {
+  if (!connected) return 'off';
+  if (ch.overload || ch.inputOverload || ch.outputOverload) return 'bad';
+  if (ch.muted === 'Muted') return 'muted';
+  if (ch.limiting) return 'warn';
+  if (ch.osp || (ch.inputLevelDbu != null && ch.inputLevelDbu > SIGNAL_THRESHOLD_DBU)) return 'ok';
+  return 'off';
+}
+
+function tile(serial, amp) {
+  const dots = (amp.channels || [])
+    .map((ch) => `<div class="dot ${channelDotClass(ch, amp.connected)}"></div>`)
+    .join('');
+  const muted = suppressedActiveFlags(amp).length > 0;
+  return `
+    <div class="tile ${activeErrorFlags(amp).length ? 'error-bg' : ''}" data-serial="${esc(serial)}">
+      <div class="dots">${dots}</div>
+      <div class="id">${esc(shortId(amp))}${muted ? ' <span class="muted-badge" title="has a suppressed alert">⚠</span>' : ''}</div>
+    </div>`;
+}
+
+function groupByModel(amps) {
+  const groups = new Map();
+  for (const [serial, amp] of Object.entries(amps)) {
+    const key = amp.model || '?';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push([serial, amp]);
+  }
+  const order = [...groups.keys()].sort();
+  return order.map((model) => ({
+    model,
+    items: groups.get(model).sort((a, b) => shortId(a[1]).localeCompare(shortId(b[1]), undefined, { numeric: true })),
+  }));
+}
+
+function renderFleet(amps) {
+  const groups = groupByModel(amps);
+  return groups.map(({ model, items }) => `
+      <div class="group">
+        <h2>${esc(model)} · ${items.length}</h2>
+        <div class="grid">${items.map(([serial, amp]) => tile(serial, amp)).join('')}</div>
+      </div>`).join('');
+}
+
+// Two calibrations, because they measure genuinely different things and
+// one dynamic range doesn't serve both:
+//
+// "output" — true output wattage relative to the channel's rated max
+// (outputPowerMaxW, read live off the amp). Makes sense when levels
+// realistically approach full rated power and the thing worth watching is
+// closeness to clipping.
+//
+// "input" — meters off the continuous input level (dBu) instead of
+// wattage. At quiet/background levels (speech, dinner music) the real
+// output power is a small fraction of a watt, and ChStatus_OutputPower's
+// sensor is simply too coarse to resolve that — confirmed live at an
+// actual event: every channel read exactly 0W despite genuine signal
+// (~-22dBu) and a real speaker load connected. Input level has real
+// resolution down there, so it's the only one of the two that actually
+// moves during a quiet event.
+const METER_SEGMENTS = 10;
+const METER_FLOOR_DB = -40;
+const INPUT_FLOOR_DBU = -50;
+const INPUT_CEIL_DBU = 0;
+
+let meterMode = 'output';
+try { meterMode = localStorage.getItem('meterMode') || 'output'; } catch {}
+function setMeterMode(mode) {
+  meterMode = mode;
+  try { localStorage.setItem('meterMode', mode); } catch {}
+  render(latestAmps);
+}
+
+function wattsToDbFs(watts, maxWatts) {
+  if (!watts || watts <= 0) return METER_FLOOR_DB;
+  const db = 10 * Math.log10(watts / (maxWatts || 5000));
+  return Math.max(METER_FLOOR_DB, Math.min(0, db));
+}
+function segColor(segDb) {
+  if (segDb >= -3) return 'red';
+  if (segDb >= -12) return 'yellow';
+  return 'green';
+}
+function inputSegColor(segDbu) {
+  if (segDbu >= -5) return 'red';
+  if (segDbu >= -15) return 'yellow';
+  return 'green';
+}
+function segMeter(ch) {
+  const overload = !!(ch && (ch.overload || ch.inputOverload || ch.outputOverload));
+  const inputMode = meterMode === 'input';
+  let lit = 0;
+  if (ch) {
+    if (inputMode) {
+      if (ch.inputLevelDbu != null) {
+        lit = Math.round(((ch.inputLevelDbu - INPUT_FLOOR_DBU) / (INPUT_CEIL_DBU - INPUT_FLOOR_DBU)) * METER_SEGMENTS);
+        lit = Math.max(0, Math.min(METER_SEGMENTS, lit));
+      }
+    } else {
+      const db = wattsToDbFs(ch.outputPowerW, ch.outputPowerMaxW);
+      lit = Math.round(((db - METER_FLOOR_DB) / -METER_FLOOR_DB) * METER_SEGMENTS);
+      lit = Math.max(0, Math.min(METER_SEGMENTS, lit));
+      // Wattage alone reads zero segments below a few watts, which is most
+      // of a real channel's quiet/idle range — if there's genuinely no
+      // measurable output but the input shows real signal (same threshold
+      // as the fleet dot), show one lit segment as a floor instead of a
+      // meter that looks dead. Once there's real wattage, the normal dB
+      // scale above takes back over. (Input mode doesn't need this — it's
+      // reading the continuous input level directly.)
+      if (lit === 0 && ch.inputLevelDbu != null && ch.inputLevelDbu > SIGNAL_THRESHOLD_DBU) lit = 1;
+    }
+  }
+  if (overload) lit = METER_SEGMENTS;
+  let segs = '';
+  for (let i = 0; i < METER_SEGMENTS; i++) {
+    const on = i < lit;
+    let color = '';
+    if (on) {
+      color = inputMode
+        ? inputSegColor(INPUT_FLOOR_DBU + (INPUT_CEIL_DBU - INPUT_FLOOR_DBU) / METER_SEGMENTS * (i + 1))
+        : segColor(METER_FLOOR_DB + (-METER_FLOOR_DB / METER_SEGMENTS) * (i + 1));
+    }
+    segs += `<div class="seg ${color}${on && overload ? ' flash' : ''}"></div>`;
+  }
+  const muted = !!(ch && ch.muted === 'Muted');
+  return `<div class="seg-meter${muted ? ' muted' : ''}">${segs}</div>`;
+}
+
+const METER_COLUMN_WIDTH_PX = 180; // rendered .meter-col width, incl. padding/divider
+
+// How many columns actually fit the available width right now. Used instead
+// of letting columns wrap via flexbox on their own: with uneven column
+// heights (a group's last column is usually shorter), a plain wrap can drop
+// a short column onto a new line directly under an earlier, taller one,
+// which reads like a stray header stuck mid-list. Deciding the column count
+// up front avoids ever wrapping a column into an awkward spot.
+function fittingColumnCount() {
+  const available = Math.min(window.innerWidth, 1600) - 24;
+  return Math.max(1, Math.floor(available / METER_COLUMN_WIDTH_PX));
+}
+
+function renderMeterModeToggle() {
+  return `<div id="meterModeToggle">
+    <button data-mode="output" class="${meterMode === 'output' ? 'active' : ''}" title="Meters off output wattage vs. the amp's rated max — for levels that realistically approach full power">Output</button>
+    <button data-mode="input" class="${meterMode === 'input' ? 'active' : ''}" title="Meters off input level instead of wattage — for quiet/background levels where wattage barely registers">Input</button>
+  </div>`;
+}
+
+function renderMeters(amps) {
+  const groups = groupByModel(amps);
+  const maxCols = fittingColumnCount();
+  return renderMeterModeToggle() + groups.map(({ model, items }) => {
+    const chCount = Math.max(1, ...items.map(([, amp]) => (amp.channels || []).length));
+    const headerHtml = `<div class="meter-header"><div class="meter-amp-id"></div><div class="meter-channels">${
+      Array.from({ length: chCount }, (_, i) => `<span>Ch ${i + 1}</span>`).join('')
+    }</div></div>`;
+
+    // Use as many columns as actually fit the width, capped only by having
+    // at least one amp per column — makes full use of a wide monitor.
+    const cols = Math.max(1, Math.min(maxCols, items.length));
+    const rowsPerCol = Math.ceil(items.length / cols);
+    const columns = [];
+    for (let i = 0; i < items.length; i += rowsPerCol) {
+      columns.push(items.slice(i, i + rowsPerCol));
+    }
+
+    const colsHtml = columns.map((colItems) => {
+      const rows = colItems.map(([serial, amp]) => {
+        const meters = Array.from({ length: chCount }, (_, i) => segMeter((amp.channels || [])[i])).join('');
+        return `<div class="meter-row" data-serial="${esc(serial)}">
+          <div class="meter-amp-id">${esc(shortId(amp))}</div>
+          <div class="meter-channels">${meters}</div>
+        </div>`;
+      }).join('');
+      return `<div class="meter-col">${headerHtml}${rows}</div>`;
+    }).join('');
+
+    return `
+      <div class="group">
+        <h2>${esc(model)} · ${items.length}</h2>
+        <div class="meter-group">
+          <div class="meter-cols">${colsHtml}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Same Output/Input split as the Meters page's segMeter() — this bar is a
+// separate piece of UI (the per-amp detail view) that got missed when the
+// toggle was added, so it stayed hardcoded to wattage and went empty under
+// the exact same quiet-signal condition already fixed there.
+function channelMeterPct(ch) {
+  if (meterMode === 'input') {
+    if (ch.inputLevelDbu == null) return 0;
+    return Math.max(0, Math.min(100, ((ch.inputLevelDbu - INPUT_FLOOR_DBU) / (INPUT_CEIL_DBU - INPUT_FLOOR_DBU)) * 100));
+  }
+  const pct = ch.outputPowerW != null ? Math.min(100, (ch.outputPowerW / (ch.outputPowerMaxW || 5000)) * 100) : 0;
+  // Same floor-sliver idea as segMeter's floor segment: wattage alone reads
+  // 0% for most of a channel's real quiet range, so show a small sliver
+  // instead of an empty bar when there's genuine input signal.
+  if (pct === 0 && ch.inputLevelDbu != null && ch.inputLevelDbu > SIGNAL_THRESHOLD_DBU) return 8;
+  return pct;
+}
+
+function channelCard(ch) {
+  const overload = !!ch.overload || !!ch.inputOverload || !!ch.outputOverload;
+  const limiting = !!ch.limiting;
+  const sig = !!ch.osp;
+  const muted = ch.muted === 'Muted';
+  const pct = channelMeterPct(ch);
+  const hot = overload || limiting;
+  const name = ch.name && ch.name.length ? esc(ch.name) : null;
+
+  return `
+    <div class="ch${muted ? ' is-muted' : ''}">
+      <div class="ch-row1">
+        <div class="ch-name">${name || 'Channel'}${muted ? '<span class="muted-tag">MUTED</span>' : ''}</div>
+        <div class="flags">
+          <span class="flag ${sig ? 'on-sig' : ''}">SIG</span>
+          <span class="flag ${limiting ? 'on-gr' : ''}">GR</span>
+          <span class="flag ${overload ? 'on-ovl' : ''}">OVL</span>
+        </div>
+      </div>
+      <div class="meter-track"><div class="meter-fill ${hot ? 'hot' : ''}" style="width:${pct}%"></div></div>
+      <div class="ch-stats">
+        <span><b>${fmt(ch.outputPowerW, 0)}</b> W</span>
+        <span><b>${fmt(ch.inputLevelDbu, 1)}</b> dBu</span>
+        <span><b>${fmt(ch.impedanceOhm, 1)}</b> Ω</span>
+        <span><b>${fmt(ch.tempC, 0)}</b>°C</span>
+        <span><b>${fmt(ch.headroomDb, 1)}</b> dB hd</span>
+        <span><b>${fmt(ch.gainDb, 1)}</b> dB gain</span>
+      </div>
+    </div>`;
+}
+
+let lastTopView = 'fleet';
+
+async function setFlagSuppressed(serial, flag, suppressed) {
+  try {
+    const response=await fetch('/api/suppress-flag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serial, flag, suppressed }),
+    });
+    if(!response.ok)throw Error((await response.json()).error||'Unable to acknowledge fault');
+    document.getElementById('actionError').textContent='';
+  } catch (err) {
+    document.getElementById('actionError').textContent=err.message;
+  }
+  // The next state broadcast will confirm it, but re-render right away with
+  // what we already know so the button doesn't feel like it did nothing.
+  render(latestAmps);
+}
+
+function errorFlagRow(serial, key, label, status, suppressedList) {
+  if (!status[key]) return '';
+  const isSuppressed = suppressedList.includes(key);
+  return `
+    <div class="err-row ${isSuppressed ? 'muted' : ''}">
+      <span>⚠ ${label}${isSuppressed ? ' (ignored)' : ''}</span>
+      <button class="ignore-btn" ${isAdmin ? '' : 'disabled title="Administrator access required"'} data-serial="${esc(serial)}" data-flag="${key}" data-suppress="${!isSuppressed}">
+        ${isSuppressed ? 'Un-ignore' : 'Ignore'}
+      </button>
+    </div>`;
+}
+
+function renderDetail(serial, amp) {
+  if (!amp) { view = lastTopView; render(latestAmps); return; }
+  const chs = (amp.channels || []).map(channelCard).join('');
+  const status = amp.status || {};
+  const deviceStatusNames = ['Off', 'Starting', 'On', 'Error', 'Error'];
+  const suppressedList = amp.suppressedFlags || [];
+  const flagRows = Object.entries(ERROR_FLAG_LABELS)
+    .map(([key, label]) => errorFlagRow(serial, key, label, status, suppressedList))
+    .join('');
+  appEl.innerHTML = `
+    <button id="backbtn">&larr; All amps</button>
+    <div class="amp">
+      <div class="amp-head">
+        <div>
+          <div class="title"><span class="headdot ${amp.connected ? 'on' : 'off'}"></span>${esc(amp.deviceName)} <span style="color:var(--muted);font-weight:400">(${esc(amp.host)})</span></div>
+          <div class="sub">${esc(status.firmware || '')} ${status.deviceStatus != null ? '· ' + (deviceStatusNames[status.deviceStatus] ?? '') : ''} ${status.smpsTempC != null ? '· PSU ' + fmt(status.smpsTempC,0) + '°C' : ''}</div>
+        </div>
+      </div>
+      ${flagRows}
+      ${chs}
+    </div>`;
+  document.getElementById('backbtn').addEventListener('click', () => {
+    view = lastTopView;
+    render(latestAmps);
+  });
+  appEl.querySelectorAll('.ignore-btn').forEach((el) => {
+    el.addEventListener('click', () => {
+      setFlagSuppressed(el.dataset.serial, el.dataset.flag, el.dataset.suppress === 'true');
+    });
+  });
+}
+
+function renderTabs() {
+  return `<div id="tabs">
+    <button data-view="fleet" class="${view === 'fleet' ? 'active' : ''}">Fleet</button>
+    <button data-view="meters" class="${view === 'meters' ? 'active' : ''}">Meters</button>
+  </div>`;
+}
+
+function render(amps) {
+  latestAmps = amps;
+  const entryCount = Object.keys(amps).length;
+
+  if (view === 'fleet' || view === 'meters') {
+    lastTopView = view;
+    if (entryCount === 0) {
+      appEl.innerHTML = renderTabs() + `<div id="empty">${discoveryEnabled?'Looking for d&amp;b amplifiers…':'No amplifiers configured. An administrator can enable discovery or add addresses in Settings.'}</div>`;
+    } else {
+      appEl.innerHTML = renderTabs() + (view === 'fleet' ? renderFleet(amps) : renderMeters(amps));
+    }
+    appEl.querySelectorAll('#tabs button').forEach((el) => {
+      el.addEventListener('click', () => { view = el.dataset.view; render(latestAmps); });
+    });
+    appEl.querySelectorAll('#meterModeToggle button').forEach((el) => {
+      el.addEventListener('click', () => setMeterMode(el.dataset.mode));
+    });
+    appEl.querySelectorAll('.tile, .meter-row').forEach((el) => {
+      el.addEventListener('click', () => { view = el.dataset.serial; render(latestAmps); });
+    });
+  } else {
+    if(amps[view])renderDetail(view, amps[view]);else{view='fleet';return render(amps);}
+  }
+
+  // Sticky banner + summary always reflect the WHOLE fleet, regardless of view.
+  const entries = Object.values(amps);
+  let anyOverload = false, anyLimiting = false, anyDeviceErr = false;
+  let online = 0, alertCount = 0;
+  for (const a of entries) {
+    if (a.connected) online++;
+    const sev = ampSeverity(a);
+    if (sev === 'bad' || sev === 'warn') alertCount++;
+    if (!a.connected) continue;
+    if (activeErrorFlags(a).length > 0) anyDeviceErr = true;
+    for (const ch of a.channels || []) {
+      if (ch.overload || ch.inputOverload || ch.outputOverload) anyOverload = true;
+      if (ch.limiting) anyLimiting = true;
+    }
+  }
+
+  bannerEl.classList.remove('ok', 'warn', 'bad');
+  if (anyOverload || anyDeviceErr) {
+    bannerEl.classList.add('bad');
+    bannerEl.textContent = anyOverload ? 'OVERLOAD' : 'DEVICE ERROR';
+  } else if (anyLimiting) {
+    bannerEl.classList.add('warn');
+    bannerEl.textContent = 'LIMITING';
+  } else if (entries.length > online) {
+    bannerEl.classList.add('warn');bannerEl.textContent='AMPLIFIERS OFFLINE';
+  } else if (entries.length) {
+    bannerEl.classList.add('ok');
+    bannerEl.textContent = 'ALL CLEAR';
+  } else {
+    bannerEl.textContent = discoveryEnabled ? 'DISCOVERING AMPLIFIERS' : 'READY TO CONFIGURE';
+  }
+
+  summaryEl.innerHTML = entries.length
+    ? `<span><b>${entries.length}</b> amps</span>
+       <span><b>${online}</b> online</span>
+       <span class="${entries.length - online ? 'bad-count' : ''}"><b>${entries.length - online}</b> offline</span>
+       <span class="${alertCount ? 'warn-count' : ''}"><b>${alertCount}</b> alert${alertCount === 1 ? '' : 's'}</span>`
+    : '';
+  if(!feedOnline){bannerEl.className='warn';bannerEl.textContent='CONNECTION LOST — DISPLAY MAY BE STALE';}
+}
+
+const settingsDialog=document.getElementById('settingsDialog');
+const settingsError=document.getElementById('settingsError');
+document.getElementById('openSettings').onclick=async()=>{
+ try{const r=await fetch('/api/settings');if(!r.ok)throw Error('Administrator access required');const s=await r.json();document.getElementById('discoveryEnabled').checked=s.discovery;document.getElementById('manualHosts').value=s.hosts.join('\n');settingsError.textContent='';settingsDialog.showModal();}catch(e){document.getElementById('actionError').textContent=e.message;}
+};
+document.getElementById('closeSettings').onclick=()=>settingsDialog.close();
+document.getElementById('saveSettings').onclick=async()=>{
+ const button=document.getElementById('saveSettings');button.disabled=true;
+ try{const r=await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discovery:document.getElementById('discoveryEnabled').checked,hosts:document.getElementById('manualHosts').value.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean)})});const result=await r.json();if(!r.ok)throw Error(result.error);settingsDialog.close();}catch(e){settingsError.textContent=e.message;}finally{button.disabled=false;}
+};
+// HTTP snapshots work through Tech Hub gateways on both platforms; OCA device subscriptions remain live.
+async function poll(){
+ try{const r=await fetch('/state',{cache:'no-store',signal:AbortSignal.timeout(4000)});if(!r.ok)throw Error('Connection lost');const msg=await r.json();isAdmin=msg.admin;discoveryEnabled=msg.discovery;discoveryError=msg.discoveryError;feedOnline=true;document.getElementById('openSettings').hidden=!isAdmin;render(msg.amps);if(discoveryError){bannerEl.className='warn';bannerEl.textContent='Discovery unavailable — '+discoveryError;}}
+ catch{feedOnline=false;bannerEl.className='warn';bannerEl.textContent='CONNECTION LOST — DISPLAY MAY BE STALE';}
+ setTimeout(poll,500);
+}
+poll();
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {if(feedOnline)render(latestAmps);}, 150);
+});
+</script>
+</body>
+</html>

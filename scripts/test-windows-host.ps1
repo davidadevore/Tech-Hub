@@ -17,7 +17,7 @@ try {
             if (@($state.services | Where-Object state -eq running).Count -eq 5) { break }
         } catch { }
     }
-    if (@($state.services | Where-Object state -eq running).Count -ne 5) { throw "Tray host services did not start: $($state | ConvertTo-Json -Depth 4)" }
+    if (@($state.services | Where-Object state -eq running).Count -ne 6) { throw "Tray host services did not start: $($state | ConvertTo-Json -Depth 4)" }
     $hostProcess.Refresh()
     if ($hostProcess.MainWindowHandle -ne 0) { throw 'Tray-only app unexpectedly opened a main window' }
     Add-Type @'

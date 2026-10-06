@@ -14,3 +14,7 @@ Tech Hub bundles [bonjour-service](https://github.com/onlxltd/bonjour-service) (
 ## adm-zip
 
 App archive creation and validation use adm-zip 0.6.1 (MIT). Its license is included with the bundled dependency. Source: https://github.com/cthackers/adm-zip
+
+## R-Too
+
+Adapted from [Devore’s D80-Panel](https://github.com/davidadevore/D80-Panel), commit `0c802d95a14b33f10d8bd7e2943de6ef29825dcf` (MIT; notice retained in `services/rtoo/LICENSE-UPSTREAM`). Uses AES70.js 2.0.20 (GPL-2.0-only) and bonjour-service 1.4.4 (MIT). The combined R-Too module is distributed under GPL-2.0-only, with the upstream MIT notice retained. Its package contains readable source and complete dependency source/license files; see `services/rtoo/README.md`. It runs in a separate module process. No d&b affiliation or endorsement is implied.

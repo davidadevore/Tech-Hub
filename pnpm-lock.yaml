@@ -11,6 +11,9 @@ importers:
       adm-zip:
         specifier: 0.6.1
         version: 0.6.1
+      aes70:
+        specifier: 2.0.20
+        version: 2.0.20
       bonjour-service:
         specifier: 1.4.4
         version: 1.4.4
@@ -23,6 +26,10 @@ packages:
   adm-zip@0.6.1:
     resolution: {integrity: sha512-Xwrja8nx9e5o2N1my4DsKCeKpdrnACyr1wtbPxBDgGzKzKyE9kRtBFA8mWldI+RVlD7CBZNWY/wQ2+ydwOR6kQ==}
     engines: {node: '>=14.0'}
+
+  aes70@2.0.20:
+    resolution: {integrity: sha512-j3lWODVG0ETNMybFFVLpsGoEjpAbRpa3HKNA4XO2qrkenXPWnzd0To55WjaQza/sEB9iIaCuTtNCemeE+nLFew==}
+    hasBin: true
 
   bonjour-service@1.4.4:
     resolution: {integrity: sha512-jCZcVv7eoc4QesRscwEZtSROBen+6LpKAmBIsQYQrsAeVHLyMXWX/t6eIV5KiRZYNUBl8eVqImEEMQ8L5+c/Kw==}
@@ -46,6 +53,8 @@ snapshots:
   '@leichtgewicht/ip-codec@2.0.5': {}
 
   adm-zip@0.6.1: {}
+
+  aes70@2.0.20: {}
 
   bonjour-service@1.4.4:
     dependencies:

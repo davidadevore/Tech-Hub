@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "rtoo",
+  "name": "R-Too",
+  "description": "Read-only d&b amplifier fleet monitoring over OCA/AES70",
+  "version": "1.0.0",
+  "minHostVersion": "1.0.1",
+  "runtime": "node",
+  "runtimeAPI": 1,
+  "entry": "server.js",
+  "accent": "#eab308",
+  "permissions": [
+    "network",
+    "data-files"
+  ],
+  "platforms": [
+    "universal"
+  ]
+}

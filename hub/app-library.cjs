@@ -47,7 +47,7 @@ function createLibrary({dir,hostVersion,platform=process.platform+'-'+process.ar
  function inspectLocal(bytes){
   if(stopped||busy)throw Error('Wait for the current module operation');if(bytes.length>256*1024*1024)throw Error('Module package exceeds 256 MB');
   const manifest=inspectPackage(bytes,{hostVersion,platform}),id=manifest.id;
-  if(['dsan','lux','power','netgear','record','ultrix'].includes(id)||catalog?.apps.some(a=>a.id===id)||read(id)&&!read(id).unofficial)throw Error('Choose a unique test app ID. Local packages cannot replace official apps.');
+  if(['dsan','lux','power','netgear','record','ultrix','rtoo'].includes(id)||catalog?.apps.some(a=>a.id===id)||read(id)&&!read(id).unofficial)throw Error('Choose a unique test app ID. Local packages cannot replace official apps.');
   discardPending();const token=crypto.randomBytes(24).toString('hex'),stage=path.join(pendingDir,token);fs.mkdirSync(stage,{recursive:true});
   try{extractPackage(bytes,stage,{id,version:manifest.version,hostVersion,platform});}catch(e){fs.rmSync(stage,{recursive:true,force:true});throw e;}
   const sha256=crypto.createHash('sha256').update(bytes).digest('hex'),expires=Date.now()+10*60*1000;pending={token,stage,manifest,sha256,expires};pendingTimer=setTimeout(discardPending,10*60*1000);pendingTimer.unref();

@@ -8,8 +8,8 @@ test('three-service upgrades preserve existing passwords and occupied assignment
   config.services.dsan.port=8704;config.services.dsan.password={salt:'saved',hash:'saved'};
   fs.writeFileSync(path.join(dir,'config.json'),JSON.stringify(config));
   const migrated=loadConfig(dir);assert.deepEqual(migrated.services.dsan,config.services.dsan);
-  assert.equal(Object.keys(migrated.services).length,5);assert.notEqual(migrated.services.netgear.port,8704);
-  assert.equal(new Set([migrated.adminPort,...Object.values(migrated.services).flatMap(s=>[s.port,s.backendPort])]).size,11);
+  assert.equal(Object.keys(migrated.services).length,6);assert.notEqual(migrated.services.netgear.port,8704);
+  assert.equal(new Set([migrated.adminPort,...Object.values(migrated.services).flatMap(s=>[s.port,s.backendPort])]).size,13);
   assert.deepEqual(loadConfig(dir),migrated);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });

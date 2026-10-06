@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add R-Too 1.0.0, a universal, read-only d&b amplifier monitoring module based on Devore’s D80-Panel. Includes fleet/meters/detail views, portable OCA discovery, live settings, manual addresses, administrator-only fault acknowledgements, reconnect handling and stale-data warnings. The standalone package can be imported into Tech Hub 1.0.1+; catalog and Full installer inclusion are prepared for the next host build.
+
 ## 1.0.2 — 2026-10-06
 
 - Move the connection-status and version bar directly below the page footer.

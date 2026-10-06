@@ -5,12 +5,12 @@ const {startHub,loadConfig,hashPassword}=require(path.join(resources,'hub/server
 (async()=>{const dir=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'tech-hub-smoke-'));let hub;const blockers=[];
 try {
  const c=loadConfig(dir);c.host='127.0.0.1';c.adminPort=30700;
- ['dsan','power','netgear','record','ultrix'].forEach((id,i)=>Object.assign(c.services[id],{port:30701+i,backendPort:30711+i}));
+ ['dsan','power','netgear','record','ultrix','rtoo'].forEach((id,i)=>Object.assign(c.services[id],{port:30701+i,backendPort:30711+i}));
  c.services.power.password=await hashPassword('smoke-test-only');fs.writeFileSync(path.join(dir,'config.json'),JSON.stringify(c));
  for(const port of [30700,30702,30711]){const server=http.createServer((req,res)=>res.end('unrelated'));await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});blockers.push(server);}
  hub=await startHub({dir});
  for(let i=0;i<100&&!hub.status().services.every(s=>s.state==='running');i++)await new Promise(r=>setTimeout(r,300));
- assert.equal(hub.status().services.length,5);
+ assert.equal(hub.status().services.length,6);
  assert(hub.status().services.every(s=>s.state==='running'),JSON.stringify(hub.status()));
  assert.notEqual(hub.config.adminPort,30700);assert.notEqual(hub.config.services.power.port,30702);assert.notEqual(hub.config.services.dsan.backendPort,30711);
  const admin=`http://127.0.0.1:${hub.config.adminPort}`;

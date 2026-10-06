@@ -19,6 +19,7 @@ const builtins = [
   {id:'netgear', name:'NETGEAR AV Switchboard', detail:'Switch discovery & monitoring', port:8704, backendPort:18704},
   {id:'record', name:'Record Monitor', detail:'HyperDeck & AJA Ki Pro', port:8705, backendPort:18705},
   {id:'ultrix', name:'Router Panel', detail:'Ross Ultrix & Blackmagic Videohub control', port:8706, backendPort:18706},
+  {id:'rtoo', name:'R-Too', detail:'d&b amplifier monitoring', port:8707, backendPort:18707},
 ];
 const escapeHTML=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const root = path.resolve(__dirname, '..');
@@ -367,6 +368,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
       serviceConfig.read(dir,d.id);
       command=process.execPath;args=[path.join(resources,d.id,d.id==='record'?'server.js':'src/main.js'),'--config',serviceConfig.file(dir,d.id)];
     }
+    if(d.id==='rtoo'){command=process.execPath;args=[path.join(resources,'rtoo/server.js')];}
     const logPath=path.join(logdir,d.id+'.log');
     if(fs.existsSync(logPath)&&fs.statSync(logPath).size>5*1024*1024)fs.renameSync(logPath,logPath+'.previous');
     supervisors.set(d.id,supervise({

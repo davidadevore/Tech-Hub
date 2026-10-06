@@ -3,6 +3,7 @@ const fs=require('node:fs'),path=require('node:path');
 const destination=path.resolve(process.argv[2]),root=path.resolve(__dirname,'..');
 function copy(from,to){fs.mkdirSync(path.dirname(to),{recursive:true});fs.cpSync(from,to,{recursive:true,dereference:true,filter:p=>path.basename(p)!=='node_modules'});}
 if(!process.argv.includes('--host-only')){
+require('./package-rtoo.cjs').stageRtoo(path.join(destination,'rtoo'));
 for(const id of ['record','ultrix']){
  const source=path.join(root,'services',id),target=path.join(destination,id);
  for(const name of (id==='record'?['server.js','public','LICENSE','README.md']:['src','public','package.json','README.md']))copy(path.join(source,name),path.join(target,name));
