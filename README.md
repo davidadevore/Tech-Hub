@@ -1,6 +1,6 @@
 # Tech Hub
 
-One desktop application for **D’san Ready**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, and **Router Panel**. Install only the modules you need, or choose the Full download with all five pre-installed. Tech Hub provides a local master page with their status, ports, and shareable network URLs.
+One desktop application for **D’san Ready**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, **Router Panel**, and **R-Too** for d&b amplifier monitoring. Install only the modules you need. The current Full download includes the original five modules; R-Too is available as a separate module download below. Tech Hub provides a local master page with their status, ports, and shareable network URLs.
 
 ## Downloads
 
@@ -8,7 +8,7 @@ Version **1.0.2** adds Module Library update controls, independent module versio
 
 ### Full w/all modules
 
-Tech Hub with all five modules included for offline installation.
+Tech Hub with the original five modules included for offline installation. Add [R-Too separately](#r-too--new-module) to the current v1.0.2 build.
 
 - [Mac — Apple silicon](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64-Full.dmg)
 - [Windows — x64](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Full-Setup.exe)
@@ -24,7 +24,8 @@ Tech Hub host and shared runtime. Choose and download modules from the Module Li
 
 Universal packages for Mac and Windows.
 
-- **[Download all modules — offline ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps.zip)**
+- **[Download bundled modules — offline ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps.zip)**
+- **[Download R-Too 1.0.0 — Mac and Windows](https://github.com/horner516/Tech-Hub/releases/download/rtoo-v1.0.0/techhub-app-rtoo-1.0.0-universal.zip)** · [Installation instructions](#r-too--new-module)
 - [Individual module downloads](https://github.com/horner516/Tech-Hub/releases/latest)
 - [Download Developer SDK](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-SDK.zip)
 - [AI tools — development instructions and starter prompts](sdk/AI-DEVELOPMENT.md)
@@ -43,7 +44,7 @@ Host updates remain separate. D’san and Power Monitor native engine changes st
 
 ### Universal modules and shared runtime
 
-One module ZIP now works on both supported platforms. Tech Hub supplies Node 24, settings helpers, ports, logging and supervision. D’san and Power Monitor retain their tested native protocol engines as host-managed drivers; they have not been rewritten into JavaScript. Their UI packages are universal, while engine changes require a host update. The other three modules run on shared Node. The Mac and Windows host installers remain platform-specific.
+One module ZIP now works on both supported platforms. Tech Hub supplies Node 24, settings helpers, ports, logging and supervision. D’san and Power Monitor retain their tested native protocol engines as host-managed drivers; they have not been rewritten into JavaScript. Their UI packages are universal, while engine changes require a host update. NETGEAR AV Switchboard, Record Monitor, Router Panel, and R-Too run on shared Node. The Mac and Windows host installers remain platform-specific.
 
 Existing v1.0.0 modules continue to work (except paused Lux Link); use Module Library to update them to universal v1.0.1 packages. Settings, passwords and ports are retained. Lux Link is omitted from the catalog, navigation and new installations, and existing Lux data remains on disk.
 
