@@ -1,14 +1,14 @@
 # Tech Hub
 
-One desktop application for **D’san Ready**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, **Router Panel**, and **R-Too** for d&b amplifier monitoring. Install only the modules you need. The current Full download includes the original five modules; R-Too is available as a separate module download below. Tech Hub provides a local master page with their status, ports, and shareable network URLs.
+One desktop application for **D’san Ready**, **Power Monitor**, **NETGEAR AV Switchboard**, **Record Monitor**, **Router Panel**, and **R-Too** for d&b amplifier monitoring. Install only the modules you need. The Full download includes all six modules, including R-Too. Tech Hub provides a local master page with their status, ports, and shareable network URLs.
 
 ## Downloads
 
-Version **1.0.2** adds Module Library update controls, independent module version tracking, and a connection-status bar below the footer. Universal packages and the shared host runtime remain supported. Lux Link is paused; its saved settings are retained. See the [changelog](CHANGELOG.md).
+Version **1.0.3** adds R-Too, searchable module browsing, and a developer submission process. Universal packages and the shared host runtime remain supported. Lux Link is paused; its saved settings are retained. See the [changelog](CHANGELOG.md).
 
 ### Full w/all modules
 
-Tech Hub with the original five modules included for offline installation. Add [R-Too separately](#r-too--new-module) to the current v1.0.2 build.
+Tech Hub with all six modules included for offline installation.
 
 - [Mac — Apple silicon](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64-Full.dmg)
 - [Windows — x64](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Full-Setup.exe)
@@ -34,11 +34,11 @@ Universal packages for Mac and Windows.
 
 Open **Module Library** in the master page to install individual modules, **Install selected**, or **Install all modules**. Full installers unpack their included modules on first launch. To use an all-modules ZIP, choose **Module Library → Offline installation → Install offline bundle**. The ZIP must match the official catalog shipped with the host or a refreshed catalog. Do not extract it first. All installed modules remain available offline.
 
-Upgrading from 0.x retains service settings, passwords, and ports. The Host installer offers **Install previously enabled modules**; the Full installer includes all modules and respects saved enabled/disabled settings. Once a module is installed, its service slider controls whether it runs and appears in shared navigation. Module updates and rollback are separate from host updates. Uninstall removes module files while retaining settings. A newly added third-party module requires reopening Tech Hub once; the five official modules activate immediately.
+Upgrading from 0.x retains service settings, passwords, and ports. The Host installer offers **Install previously enabled modules**; the Full installer includes all modules and respects saved enabled/disabled settings. Once a module is installed, its service slider controls whether it runs and appears in shared navigation. Module updates and rollback are separate from host updates. Uninstall removes module files while retaining settings. A newly added third-party module requires reopening Tech Hub once; the six bundled modules activate immediately.
 
 ### Browse and submit modules
 
-The next host build adds **Browse modules** inside Module Library: search by name, purpose or developer and filter available, installed or updatable modules. **Check for updates** refreshes the reviewed catalog, including newly approved modules. Choose **Install** on a module card; reopen Tech Hub after installing a new module ID on current hosts. Search/filter controls are not yet in the published v1.0.2 installer.
+**Browse modules** is available inside Module Library: search by name, purpose or developer and filter available, installed or updatable modules. **Check for updates** refreshes the reviewed catalog, including newly approved modules. Choose **Install** on a module card; reopen Tech Hub after installing a new module ID on current hosts.
 
 Developers: [Submit a module](https://github.com/horner516/Tech-Hub/issues/new?template=module-submission.yml) · [Submission and review process](sdk/SUBMITTING.md). Approved modules can be published in a catalog-only release without rebuilding desktop installers. Local ZIP installation remains available for testing and private modules.
 
@@ -66,7 +66,7 @@ Read-only d&b amplifier monitoring based on [Devore’s D80-Panel](https://githu
 
 [Download R-Too 1.0.0](https://github.com/horner516/Tech-Hub/releases/download/rtoo-v1.0.0/techhub-app-rtoo-1.0.0-universal.zip) · [Setup and source](services/rtoo/README.md)
 
-For current Tech Hub 1.0.1/1.0.2 installations, import the ZIP through **Module Library → Testing & evaluation**, then reopen Tech Hub. The imported module is labeled unofficial because it was installed manually. Open **R-Too → Settings** to enable discovery or enter amplifier addresses. No amplifier connections are made by default. Catalog and Full installer inclusion are prepared for the next host build; the current v1.0.2 installers still include the original five modules.
+On older Tech Hub 1.0.1/1.0.2 installations, import the ZIP through **Module Library → Testing & evaluation**, then reopen Tech Hub. The imported module is labeled unofficial because it was installed manually. Open **R-Too → Settings** to enable discovery or enter amplifier addresses. No amplifier connections are made by default. In v1.0.3, R-Too is available in Module Library and included with Full installers. If you previously imported R-Too manually, uninstall that module before installing its catalog version; saved settings are retained.
 
 ### Companion module
 
@@ -136,7 +136,7 @@ Use **Configure** on Record Monitor to edit its JSON settings. Add entries to `d
 
 Use **Configure routers** on Router Panel (formerly Ultrix Panel) to open its settings page. Like the NETGEAR setup page, it opens on the Tech Hub computer or for a signed-in network administrator. Save one or more routers, choose the type (**Ross Ultrix / SW-P-08** or **Blackmagic Videohub**), enter the address and port, and choose which router is **active**. Only the active router connects. Each saved router keeps its own levels, sources, destinations, categories, name overrides and access profiles. Switching the active router reconnects the panel with that router's setup. A blank address keeps a router disconnected. A Videohub has one level. Categories show a live preview of how the active router's names will be grouped. Existing Ultrix Panel settings are upgraded to one saved router automatically. See the [Router Panel configuration guide](services/ultrix/README.md). Facility configuration and exported router names are not included in public downloads.
 
-All five services use the same port-conflict avoidance, password gates, logs, and individual restart controls. Existing Tech Hub ports and passwords survive upgrades. Power Monitor runs without a separate Windows tray icon when launched by Tech Hub; the standalone Power Monitor module retains its own tray.
+All six services use the same port-conflict avoidance, password gates, logs, and individual restart controls. Existing Tech Hub ports and passwords survive upgrades. Power Monitor runs without a separate Windows tray icon when launched by Tech Hub; the standalone Power Monitor module retains its own tray.
 
 See [third-party notices and source attribution](THIRD_PARTY.md).
 
@@ -208,7 +208,7 @@ pnpm --dir services/netgear install --frozen-lockfile
 PYTHON_BINARY="$PWD/.venv/bin/python" bash scripts/build-mac.sh
 ```
 
-The build creates `dist/Tech Hub.app`, `dist/Tech-Hub-macOS-arm64.dmg`, and its checksum. Set `NODE_BINARY` or `GO_BINARY` to override compiler/runtime paths. The source retains the paused Lux Link module; releases include five active applications and their regression tests; their individual documentation remains under `services/`.
+The build creates `dist/Tech Hub.app`, `dist/Tech-Hub-macOS-arm64.dmg`, and its checksum. Set `NODE_BINARY` or `GO_BINARY` to override compiler/runtime paths. The source retains the paused Lux Link module; releases include six active modules and their regression tests; their individual documentation remains under `services/`.
 
 ```sh
 node --test tests/*.test.cjs
