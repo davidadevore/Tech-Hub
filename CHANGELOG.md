@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add a compact AI SDK starting guide, per-module brief/agent scaffolding, and standalone development CLI with context, structured checks, isolated-data administrator/viewer previews and packaging. Full host integration still requires real Tech Hub testing.
+
+
 ## 1.0.3 — 2026-10-06
 
 - Add searchable module browsing with availability/installation/update filters, optional developer attribution and source links. Add a GitHub developer submission form, review/publishing guide, and an offline catalog validation tool for publishing approved modules without a new host installer.

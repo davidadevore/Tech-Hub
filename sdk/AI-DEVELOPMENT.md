@@ -1,6 +1,6 @@
-# Developing Tech Hub apps with AI tools
+# Developing Tech Hub modules with AI tools
 
-This guide applies to Codex, Claude Code, Cursor, Copilot, and other coding assistants. Give your assistant the module contract and design guide before asking it to change code. AI-generated code has the same review and testing requirements as handwritten code.
+This guide applies to Codex, Claude Code, Cursor, Copilot, and other coding assistants. Start with [AI-START.md](AI-START.md) and the module’s short `MODULE-BRIEF.md`. Read this longer guide only for planning or review. AI-generated code has the same review and testing requirements as handwritten code.
 
 ## 1. Give the assistant a precise task
 
@@ -10,7 +10,7 @@ Do not let the assistant guess undocumented registers, ports, packet layouts, un
 
 ## 2. Suggested initial prompt
 
-> Build a Tech Hub app with ID `example-meter` using `sdk/template`. First read `sdk/APP-CONTRACT.md`, `sdk/DESIGN.md`, `sdk/SHARED-RUNTIME.md`, and `sdk/AI-DEVELOPMENT.md`. Use the host-provided Node 24 runtime and helper API version 1, require Tech Hub 1.0.1 or later, and produce one universal ZIP for Mac and Windows. Do not embed runtime executables, use native add-ons, call platform shell tools, or download executable dependencies. Implement [specific behavior] using [protocol documentation]. Bind the web interface only to TECH_HUB_BACKEND_HOST and TECH_HUB_BACKEND_PORT. Store settings only in TECH_HUB_DATA_DIR. Preserve shared navigation, authentication and the design system. Use simulated devices for development. Do not scan networks, connect to production devices, send control commands, publish packages, or create installers unless I explicitly authorize it. Explain assumptions, implement the smallest complete change, and run the validator plus meaningful tests.
+> Build a Tech Hub module with ID `example-meter` using `sdk/template`. First read only `sdk/AI-START.md` and the module’s `MODULE-BRIEF.md`. Use `sdk/dev.cjs context` and `check`; open other SDK guides only as needed. Use the host-provided Node 24 runtime and helper API version 1, require Tech Hub 1.0.1 or later, and produce one universal ZIP for Mac and Windows. Do not embed runtime executables, use native add-ons, call platform shell tools, or download executable dependencies. Implement [specific behavior] using [protocol documentation]. Bind the web interface only to TECH_HUB_BACKEND_HOST and TECH_HUB_BACKEND_PORT. Store settings only in TECH_HUB_DATA_DIR. Preserve shared navigation, authentication and the design system. Use simulated devices for development. Do not scan networks, connect to production devices, send control commands, publish packages, or create installers unless I explicitly authorize it. Explain assumptions, implement the smallest complete change, and run the validator plus meaningful tests.
 
 Replace the placeholders with actual requirements. Do not copy example addresses into production configuration.
 

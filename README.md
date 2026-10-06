@@ -27,7 +27,7 @@ Universal packages for Mac and Windows.
 - **[Download bundled modules — offline ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps.zip)**
 - **[Download R-Too 1.0.0 — Mac and Windows](https://github.com/horner516/Tech-Hub/releases/download/rtoo-v1.0.0/techhub-app-rtoo-1.0.0-universal.zip)** · [Installation instructions](#r-too--new-module)
 - [Individual module downloads](https://github.com/horner516/Tech-Hub/releases/latest)
-- [Download Developer SDK](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-SDK.zip)
+- [Download Developer SDK](https://github.com/horner516/Tech-Hub/releases/download/sdk-v1.1.0/Tech-Hub-SDK.zip)
 - [AI tools — development instructions and starter prompts](sdk/AI-DEVELOPMENT.md)
 - [SDK documentation and shared-runtime guide](sdk/SHARED-RUNTIME.md)
 
@@ -56,7 +56,9 @@ Existing v1.0.0 modules continue to work (except paused Lux Link); use Module Li
 
 ### Develop a module
 
-[Download the SDK](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-SDK.zip) · [SDK documentation](sdk/README.md) · [AI development instructions](sdk/AI-DEVELOPMENT.md) · [Design guide](sdk/DESIGN.md)
+[Download the SDK](https://github.com/horner516/Tech-Hub/releases/download/sdk-v1.1.0/Tech-Hub-SDK.zip) · [SDK documentation](sdk/README.md) · [AI development instructions](sdk/AI-DEVELOPMENT.md) · [Design guide](sdk/DESIGN.md)
+
+The SDK source now includes a [compact AI starting guide](sdk/AI-START.md) and a [standalone development CLI](sdk/README.md#fast-path-for-ai-assisted-development) for scaffolding, JSON diagnostics, temporary local previews and packaging. Available now in SDK **1.1.0**, independently of the host installer.
 
 The SDK includes a [shared-runtime guide](sdk/SHARED-RUNTIME.md), a working starter module, manifest validator, package builder, visual conventions, and prompts/checklists for developers using AI tools. **Testing outside the catalog:** open **Module Library → Testing & evaluation**, choose a module ZIP, review its details, and confirm installation. Unofficial modules are clearly labeled and support manual updates, rollback, and uninstall with settings retained. Use a unique module ID; local packages cannot overwrite official modules. Reopen Tech Hub once to load a newly added module. Module submissions are reviewed before inclusion in the official catalog. Modules run as the signed-in user; permission declarations are not an OS sandbox.
 
