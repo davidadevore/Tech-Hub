@@ -10,7 +10,7 @@ Do not let the assistant guess undocumented registers, ports, packet layouts, un
 
 ## 2. Suggested initial prompt
 
-> Build a Tech Hub app with ID `example-meter` using `sdk/template`. First read `sdk/APP-CONTRACT.md`, `sdk/DESIGN.md`, and `sdk/AI-DEVELOPMENT.md`. Implement [specific behavior] using [protocol documentation]. Bind the web interface only to TECH_HUB_BACKEND_HOST and TECH_HUB_BACKEND_PORT. Store settings only in TECH_HUB_DATA_DIR. Preserve shared navigation, authentication and the design system. Use simulated devices for development. Do not scan networks, connect to production devices, send control commands, publish packages, or create installers unless I explicitly authorize it. Explain assumptions, implement the smallest complete change, and run the validator plus meaningful tests.
+> Build a Tech Hub app with ID `example-meter` using `sdk/template`. First read `sdk/APP-CONTRACT.md`, `sdk/DESIGN.md`, `sdk/SHARED-RUNTIME.md`, and `sdk/AI-DEVELOPMENT.md`. Use the host-provided Node 24 runtime and helper API version 1, require Tech Hub 1.0.1 or later, and produce one universal ZIP for Mac and Windows. Do not embed runtime executables, use native add-ons, call platform shell tools, or download executable dependencies. Implement [specific behavior] using [protocol documentation]. Bind the web interface only to TECH_HUB_BACKEND_HOST and TECH_HUB_BACKEND_PORT. Store settings only in TECH_HUB_DATA_DIR. Preserve shared navigation, authentication and the design system. Use simulated devices for development. Do not scan networks, connect to production devices, send control commands, publish packages, or create installers unless I explicitly authorize it. Explain assumptions, implement the smallest complete change, and run the validator plus meaningful tests.
 
 Replace the placeholders with actual requirements. Do not copy example addresses into production configuration.
 
@@ -56,3 +56,12 @@ Run the validator, automated tests and package checks. Inspect package contents 
 ## Testing outside the catalog
 
 Package the app with `sdk/package.cjs`, then import the ZIP from App Library → Testing & evaluation. Review the app name, ID, version, declared access, and checksum before confirming. Use a distinct test ID instead of an official app ID. New apps require reopening the host once. Subsequent local package installs support the same version number for iterative development and retain a previous package for rollback. This is trusted-code execution under your account, not a sandbox; test unfamiliar apps on an isolated computer or VM. Catalog publication remains a separate reviewed step.
+
+## Shared runtime review checklist
+
+- Use `TECH_HUB_RUNTIME_API` rather than duplicating runtime helpers or guessing an installation path.
+- Declare `runtime: "node"`, `runtimeAPI: 1`, `platforms: ["universal"]`, and `minHostVersion: "1.0.1"` or later.
+- Keep protocol-specific logic in the app; do not invent a new host engine or assume the private D’san/Power engines are a general-purpose Python/Go runtime.
+- Use the same package bytes on Mac and Windows; check case-sensitive imports and pure-JavaScript dependency portability.
+- Test actual failure behavior with fixtures. Host driver selection tests do not prove compatibility with physical hardware.
+- Preserve user settings outside the package and verify upgrade/rollback compatibility.

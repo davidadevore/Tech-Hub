@@ -1,14 +1,10 @@
-# Tech Hub 1.0.0
+# Tech Hub 1.0.1
 
-- Modular host with an in-app App Library: install one app, selected apps, or all six official apps.
-- Separate Host and Full installers for macOS Apple silicon and Windows x64. Full includes every app for offline setup.
-- Platform-specific all-apps ZIP downloads, individual app packages, an official catalog, and SDK download linked in the README.
-- App updates, rollback, and uninstall retain settings. Downloads are checksum-verified and validated before activation; failed starts restore the previous package.
-- Existing service configuration, passwords, port assignments, and enabled states survive migration. Previously enabled apps can be reinstalled together.
-- Shared navigation lists installed, enabled apps. Host updates remain separate from app updates.
-- Install local app ZIPs for testing outside the catalog, with a review/confirmation step, unofficial labels, manual updates, rollback, and settings retention.
-- Developer SDK with a working Node starter, packaging/validation tools, app contract, design guide, and detailed AI development instructions.
+- One universal app package per service, usable on Mac and Windows, plus a single **Tech-Hub-All-Apps.zip** offline download.
+- Shared host runtime: Node 24 and versioned SDK helpers for persistent settings, bounded JSON requests, administrator checks, and HTTP startup.
+- D’san and Power Monitor use host-managed native compatibility engines. Their tested protocol implementations are retained; UI packages no longer carry platform runtimes. Protocol-engine updates require a host update.
+- Lux Link is paused and removed from the catalog, navigation, and new installers. Existing Lux settings and installed package data are retained.
+- SDK updated with a universal starter, shared-runtime contract, packaging rules, and detailed instructions for AI-assisted development.
+- Existing service ports, passwords and settings are preserved. Legacy v1.0.0 packages remain supported for the five active apps; update them through App Library.
 
-Full installers require no internet to install the included apps. Offline ZIP imports must match a trusted catalog. New third-party catalog apps require reopening the host once after first installation. Installed apps run with the desktop user's permissions; catalog submissions require review.
-
-Mac: macOS 13+, Apple silicon, ad-hoc signed. Windows: Windows 10 1809+/11 x64, unsigned per-user installer. Existing Companion 1.0.3 remains compatible.
+Choose **Host** to install apps from the App Library or **Full** for the five apps included offline. Mac and Windows installers remain separate. The universal ZIP works on either supported host. Protocol engines have not been rewritten; device behavior still depends on your hardware and network.

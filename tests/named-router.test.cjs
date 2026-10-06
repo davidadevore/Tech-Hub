@@ -28,9 +28,10 @@ test('short hostname routes retain password, disabled, origin and local-only gat
   assert.equal((await request(port,'dsan.local','/','GET',undefined,{Origin:'http://evil.invalid'})).status,403);
   assert.equal((await post('/api/access',{id:'dsan',password:'fixture-password'})).status,200);
   assert.equal((await request(port,'dsan.local')).status,401);
-  assert.equal((await post('/api/enabled',{id:'lux',enabled:false})).status,200);
-  assert.equal((await request(port,'lux.local')).status,503);
-  assert.doesNotMatch((await request(port,'tech.local')).text,/Lux Link/);
+  assert.equal((await post('/api/enabled',{id:'power',enabled:false})).status,200);
+  assert.equal((await request(port,'pd.local')).status,503);
+  assert.doesNotMatch((await request(port,'tech.local')).text,/Power Monitor/);
+  assert.equal((await post('/api/enabled',{id:'power',enabled:true})).status,200);
   assert.equal((await post('/api/naming',{suffix:'bad.local',portless:true})).status,400);
   assert.equal((await post('/api/naming',{suffix:'stage1',portless:true},{Origin:'http://evil.invalid'})).status,403);
   assert.equal((await post('/api/naming',{suffix:' Stage1 ',portless:true})).status,200);
@@ -39,7 +40,7 @@ test('short hostname routes retain password, disabled, origin and local-only gat
   assert.equal((await request(port,'pd.local')).status,421);
   assert.equal(JSON.parse((await request(port,'pd-stage1.local')).text).service,'power');
   assert.equal((await request(port,'dsan-stage1.local')).status,401);
-  assert.equal((await post('/api/naming',{suffix:'stage1',portless:true,names:{dsan:'lux.local'}})).status,400);
+  assert.equal((await post('/api/naming',{suffix:'stage1',portless:true,names:{dsan:'pd.local'}})).status,400);
   assert.equal((await post('/api/naming',{suffix:'stage1',portless:true,names:{dsan:'DSAN1.local',power:'power1',master:'show.local'}})).status,200);
   port=hub.status().naming.port;
   assert.equal(loadConfig(dir).naming.names.dsan,'dsan1');

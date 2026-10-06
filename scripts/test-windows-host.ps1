@@ -14,10 +14,10 @@ try {
         try {
             $runtime = Get-Content (Join-Path $testDir 'runtime.json') -Raw | ConvertFrom-Json
             $state = Invoke-RestMethod "http://127.0.0.1:$($runtime.adminPort)/api/status"
-            if (@($state.services | Where-Object state -eq running).Count -eq 6) { break }
+            if (@($state.services | Where-Object state -eq running).Count -eq 5) { break }
         } catch { }
     }
-    if (@($state.services | Where-Object state -eq running).Count -ne 6) { throw "Tray host services did not start: $($state | ConvertTo-Json -Depth 4)" }
+    if (@($state.services | Where-Object state -eq running).Count -ne 5) { throw "Tray host services did not start: $($state | ConvertTo-Json -Depth 4)" }
     $hostProcess.Refresh()
     if ($hostProcess.MainWindowHandle -ne 0) { throw 'Tray-only app unexpectedly opened a main window' }
     Add-Type @'

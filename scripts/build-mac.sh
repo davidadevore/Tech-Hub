@@ -12,29 +12,21 @@ resources="$app/Contents/Resources"
 mkdir -p build dist
 export PYINSTALLER_CONFIG_DIR="$project_dir/build/pyinstaller-cache"
 if [[ -d "$app" ]]; then rm -rf "$app"; fi
-mkdir -p "$app/Contents/MacOS" "$resources/hub" "$resources/lux/dashboard"
-"$GO_BINARY" -C services/power build -trimpath -o "$resources/power-server" .
+mkdir -p "$app/Contents/MacOS" "$resources/hub" "$resources/drivers"
+mkdir -p "$resources/drivers/power"
+"$GO_BINARY" -C services/power build -trimpath -o "$resources/drivers/power/power-server" .
 "$PYTHON_BINARY" -m PyInstaller --noconfirm --clean --onedir --name dsan-server --distpath build/python-dist --workpath build/python-work --specpath build --add-data "$project_dir/services/dsan/index.html:." services/dsan/app.py
-cp -R build/python-dist/dsan-server "$resources/dsan"
-(cd services/lux && "$NODE_BINARY" node_modules/vite/bin/vite.js build --config desktop/vite.config.ts)
-cp -R services/lux/desktop-web/. "$resources/lux/dashboard/"
-cp -R services/lux/electron services/lux/lib "$resources/lux/"
-cp services/lux/package.json "$resources/lux/package.json"
+cp -R build/python-dist/dsan-server "$resources/drivers/dsan"
 cp "$NODE_BINARY" "$resources/node"
 cp hub/* "$resources/hub/"
 cp package.json "$resources/package.json"
-(cd services/netgear && "$NODE_BINARY" node_modules/next/dist/bin/next build)
-"$NODE_BINARY" scripts/bundle-services.cjs "$resources"
+if [[ ! -f dist/app-packages-universal/catalog.json ]]; then "$NODE_BINARY" scripts/build-universal.cjs; fi
+"$NODE_BINARY" scripts/bundle-services.cjs "$resources" --host-only
+cp dist/app-packages-universal/catalog.json "$resources/catalog.json"
 cp native-mac/Info.plist "$app/Contents/Info.plist"
 cp assets/TechHub.icns "$resources/TechHub.icns"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$app/Contents/Info.plist"
 /usr/bin/swiftc -module-cache-path "$project_dir/build/swift-cache" -target arm64-apple-macos13.0 native-mac/TechHub.swift -o "$app/Contents/MacOS/Tech Hub" -framework AppKit -framework Foundation
-reader="$resources/MA Web Remote Reader.app"
-mkdir -p "$reader/Contents/MacOS"
-/usr/bin/clang -fobjc-arc -mmacosx-version-min=13.0 services/lux/native-mac/MAWebRemoteReader.m -o "$reader/Contents/MacOS/MA Web Remote Reader" -framework AppKit -framework Foundation -framework Vision -framework WebKit
-cp services/lux/native-mac/MAWebRemoteReader-Info.plist "$reader/Contents/Info.plist"
-/usr/bin/codesign --force --deep --sign - "$app"
-"$NODE_BINARY" scripts/package-apps.cjs "$resources"
 make_dmg() {
   local filename="$1"
   /usr/bin/codesign --force --deep --sign - "$app"
@@ -49,6 +41,6 @@ make_dmg() {
   (cd dist && shasum -a 256 "$filename" > "$filename.sha256")
 }
 make_dmg Tech-Hub-macOS-arm64.dmg
-cp -R dist/app-packages-darwin-arm64 "$resources/offline-apps"
+cp -R dist/app-packages-universal "$resources/offline-apps"
 make_dmg Tech-Hub-macOS-arm64-Full.dmg
 echo "Built host and full macOS installers."

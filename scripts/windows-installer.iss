@@ -26,6 +26,7 @@ WizardStyle=modern
 SetupIconFile=..\assets\TechHub.ico
 CloseApplications=no
 [InstallDelete]
+Type: filesandordirs; Name: "{app}\resources\drivers"
 Type: filesandordirs; Name: "{app}\resources\offline-apps"
 Type: filesandordirs; Name: "{app}\resources\dsan"
 Type: filesandordirs; Name: "{app}\resources\lux"

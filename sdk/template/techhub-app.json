@@ -1,1 +1,1 @@
-{"schemaVersion":1,"id":"example-meter","name":"Example Meter","description":"A starter app for Tech Hub","version":"1.0.0","minHostVersion":"1.0.0","runtime":"node","entry":"server.cjs","accent":"#ff8a1f","permissions":["data-files"],"platforms":["darwin-arm64","win32-x64"]}
+{"schemaVersion":1,"id":"example-meter","name":"Example Meter","description":"A starter app for Tech Hub","version":"1.0.0","minHostVersion":"1.0.1","runtimeAPI":1,"runtime":"node","entry":"server.cjs","accent":"#ff8a1f","permissions":["data-files"],"platforms":["universal"]}

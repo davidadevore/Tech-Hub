@@ -1565,6 +1565,9 @@ func (app *App) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			filename = "index.html"
 		}
 		data, err := bundledFiles.ReadFile("web/" + filename)
+		if appRoot := os.Getenv("TECH_HUB_APP_ROOT"); appRoot != "" {
+			data, err = os.ReadFile(filepath.Join(appRoot, "web", filename))
+		}
 		if err != nil {
 			writeJSON(writer, 500, map[string]any{"ok": false, "error": "Web interface files are missing."})
 			return

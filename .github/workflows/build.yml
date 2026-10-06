@@ -8,7 +8,28 @@ on:
 permissions:
   contents: read
 jobs:
+  apps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.19.0'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir services/netgear install --frozen-lockfile
+      - run: node scripts/build-universal.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-apps
+          path: |
+            dist/app-packages-universal
+            dist/Tech-Hub-All-Apps.zip
+            dist/tech-hub-catalog.json
   windows:
+    needs: apps
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,10 +51,12 @@ jobs:
           version: '11.19.0'
       - run: pnpm install --frozen-lockfile
       - run: python -m pip install -r requirements-build.txt
-      - run: pnpm --dir services/lux install --frozen-lockfile
-      - run: pnpm --dir services/netgear install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: universal-apps
+          path: dist
       - run: python -m unittest discover -s services/dsan -p "test_*.py"
-      - run: node --test tests/*.test.cjs services/lux/tests/fetch-signal-snapshot.test.mjs services/ultrix/test/*.test.js
+      - run: node --test tests/*.test.cjs services/ultrix/test/*.test.js
       - run: go -C services/power test ./...
       - run: ./scripts/build-windows.ps1
         shell: pwsh
@@ -45,10 +68,8 @@ jobs:
           name: windows-installer
           path: |
             dist/Tech-Hub-Windows-x64-*.exe*
-            dist/Tech-Hub-All-Apps-win32-x64.zip
-            dist/catalog-win32-x64.json
-            dist/app-packages-win32-x64/*.zip
   mac:
+    needs: apps
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -67,10 +88,12 @@ jobs:
           version: '11.19.0'
       - run: pnpm install --frozen-lockfile
       - run: python -m pip install -r requirements-build.txt
-      - run: pnpm --dir services/lux install --frozen-lockfile
-      - run: pnpm --dir services/netgear install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: universal-apps
+          path: dist
       - run: python -m unittest discover -s services/dsan -p "test_*.py"
-      - run: node --test tests/*.test.cjs services/lux/tests/fetch-signal-snapshot.test.mjs services/ultrix/test/*.test.js
+      - run: node --test tests/*.test.cjs services/ultrix/test/*.test.js
       - run: go -C services/power test ./...
       - run: bash scripts/build-mac.sh
       - run: node scripts/smoke-bundle.cjs "dist/Tech Hub.app/Contents/Resources"
@@ -79,12 +102,9 @@ jobs:
           name: mac-installer
           path: |
             dist/Tech-Hub-macOS-arm64*.dmg*
-            dist/Tech-Hub-All-Apps-darwin-arm64.zip
-            dist/catalog-darwin-arm64.json
-            dist/app-packages-darwin-arm64/*.zip
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows, mac]
+    needs: [apps, windows, mac]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -101,6 +121,7 @@ jobs:
       - name: Prepare catalog and SDK
         run: |
           find installers -mindepth 2 -type f -name '*.zip' -exec mv {} installers/ \;
+          rm -f installers/app-packages-universal/catalog.json
           find installers -mindepth 1 -type d -empty -delete
           node scripts/release-catalog.cjs installers
       - name: Publish installers together

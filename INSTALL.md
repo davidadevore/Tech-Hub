@@ -4,7 +4,7 @@ Requires an Apple silicon Mac (M1 or later) running macOS 13 or later.
 
 1. Open the disk image and drag Tech Hub into Applications.
 2. Open Tech Hub from Applications. The TH menu appears in the menu bar.
-3. Choose Open Master Page. It shows the status and URLs for all six services.
+3. Choose Open Master Page. It shows the status and URLs for all five services.
 4. Allow Local Network access if macOS asks. If using the macOS firewall, allow
    incoming connections for Tech Hub when sharing dashboards with other computers.
 5. Use each service’s settings to add your devices. New installs start empty.
@@ -24,4 +24,6 @@ app updates. The menu provides shortcuts to configuration and logs.
 
 ## Tech Hub 1.0 app choices
 
-Choose Host for a smaller download and install apps from App Library. Choose Full to include all six official apps without internet access. The all-apps ZIP can also be imported through App Library on an existing host; use the ZIP for your platform and host catalog version. The Full installer retains previously disabled services. App updates and uninstall preserve settings. Existing 0.x installations can use Install previously enabled apps after a Host upgrade. Quit Tech Hub before replacing the desktop application.
+Choose Host for a smaller download and install apps from App Library. Choose Full to include all five official apps without internet access. The all-apps ZIP can also be imported through App Library on an existing host; use the universal ZIP matching your host catalog version. The Full installer retains previously disabled services. App updates and uninstall preserve settings. Existing 0.x installations can use Install previously enabled apps after a Host upgrade. Quit Tech Hub before replacing the desktop application.
+
+App packages are universal between supported Mac and Windows hosts. Tech Hub provides Node and the native D’san/Power compatibility engines. Lux Link is paused; existing settings are retained. See sdk/SHARED-RUNTIME.md for the runtime contract.

@@ -15,7 +15,6 @@ const {promisify} = require('node:util');
 const scrypt = promisify(crypto.scrypt);
 const builtins = [
   {id:'dsan', name:'D’san Ready', detail:'Limitimer & PerfectCue', port:8701, backendPort:18701},
-  {id:'lux', name:'Lux Link', detail:'Lighting network', port:8702, backendPort:18702},
   {id:'power', name:'Power Monitor', detail:'Power distribution', port:8703, backendPort:18703},
   {id:'netgear', name:'NETGEAR AV Switchboard', detail:'Switch discovery & monitoring', port:8704, backendPort:18704},
   {id:'record', name:'Record Monitor', detail:'HyperDeck & AJA Ki Pro', port:8705, backendPort:18705},
@@ -64,14 +63,14 @@ function adminLogin(error=''){return loginPage('Tech Hub administration',error).
 async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), launch=true,checkUpdates=launch,advertise=launch,namedPort=80,hostnameOptions={},modular=launch,libraryOptions={},seedDir=process.env.TECH_HUB_SEED_DIR}={}) {
   const updates=require('./updates.cjs').createUpdateChecker(require('../package.json').version);
   const resources=process.env.TECH_HUB_RESOURCES||path.join(root,'build','resources');
-  const migrationFile=path.join(dir,'app-migration.json');let migration={recommended:[]};if(modular){fs.mkdirSync(dir,{recursive:true});if(fs.existsSync(migrationFile))migration=JSON.parse(fs.readFileSync(migrationFile,'utf8'));else{if(fs.existsSync(path.join(dir,'config.json')))migration.recommended=Object.entries(JSON.parse(fs.readFileSync(path.join(dir,'config.json'),'utf8')).services||{}).filter(([,s])=>s.enabled!==false).map(([id])=>id);save(migrationFile,migration);}}
+  const migrationFile=path.join(dir,'app-migration.json');let migration={recommended:[]};if(modular){fs.mkdirSync(dir,{recursive:true});if(fs.existsSync(migrationFile))migration=JSON.parse(fs.readFileSync(migrationFile,'utf8'));else{if(fs.existsSync(path.join(dir,'config.json')))migration.recommended=Object.entries(JSON.parse(fs.readFileSync(path.join(dir,'config.json'),'utf8')).services||{}).filter(([id,s])=>id!=='lux'&&s.enabled!==false).map(([id])=>id);save(migrationFile,migration);}}
   const library=modular?require('./app-library.cjs').createLibrary({dir,hostVersion:require('../package.json').version,catalogPath:path.join(resources,'catalog.json'),...libraryOptions,beforeChange:async id=>{await supervisors.get(id)?.stop();if(activeResponses.has(id))invalidate(id);},afterChange:async id=>{
     const installed=library.read(id);if(!installed){states.set(id,{state:'uninstalled',error:null});viewers.remove(id);return;}
     if(!supervisors.has(id)){return;}
     if(config.services[id].enabled){supervisors.get(id).start();for(let i=0;i<110;i++){if(stopping)throw Error('Tech Hub is shutting down');if(states.get(id)?.state==='running')return;if(states.get(id)?.state==='error')break;await new Promise(r=>setTimeout(r,300));}throw Error('App did not become healthy. Previous version restored.');}
     states.set(id,{state:'disabled',error:null});
   }}):null;
-  const definitions=[...builtins];for(const app of library?.installed()||[])if(!definitions.some(d=>d.id===app.manifest.id))definitions.push({id:app.manifest.id,name:app.manifest.name,detail:app.manifest.description,port:8800+definitions.length,backendPort:18800+definitions.length});
+  const definitions=[...builtins];for(const app of library?.installed()||[])if(app.manifest.id!=='lux'&&!definitions.some(d=>d.id===app.manifest.id))definitions.push({id:app.manifest.id,name:app.manifest.name,detail:app.manifest.description,port:8800+definitions.length,backendPort:18800+definitions.length});
   const config=loadConfig(dir,definitions), sessions=new Map(), attempts=new Map(), states=new Map(), servers=[],supervisors=new Map();
   let hostnames,namedRouter;const gateways=new Map();let namingChange=false;
   const activeResponses=new Map(definitions.map(d=>[d.id,new Set()]));
@@ -83,7 +82,7 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
   const administrator=req=>local(req)||adminAccess.authorized(req);
   const adminHost=req=>{try{const url=new URL('http://'+req.headers.host);return url.port===String(config.adminPort)&&['127.0.0.1','localhost',...ips(config.host),serviceHostname('master',config.naming.suffix,config.naming.names)].includes(url.hostname);}catch{return false;}};
   const chrome=require('./service-chrome.cjs');
-  const isInstalled=id=>!library||!!library.read(id);
+  const isInstalled=id=>id!=='lux'&&(!library||!!library.read(id));
   const navigation=(req,id)=>({current:id,adminPort:config.adminPort,local:administrator(req),settings:administrator(req)&&['record','ultrix'].includes(id),services:services.filter(s=>config.services[s.id].enabled&&isInstalled(s.id)).map(s=>({id:s.id,name:s.name,port:s.port,hostnameURL:hostnames?.info(s.id).hostnameURL,networkURL:ips(config.host)[0]?`http://${ips(config.host)[0]}:${s.port}`:null,protected:!!config.services[s.id].password,state:states.get(s.id)?.state}))});
   let discovering=false;
   async function discoverHyperDecks(req,res){
@@ -373,10 +372,10 @@ async function startHub({dir=process.env.TECH_HUB_DATA_DIR||defaultDataDir(), la
     supervisors.set(d.id,supervise({
       autoStart:config.services[d.id].enabled&&isInstalled(d.id),
       start:()=>{
-        let appRoot=resources;
-        if(library){const installed=library.read(d.id);if(!installed)throw Error('Install this app from App Library.');appRoot=installed.root;command=installed.manifest.runtime==='node'?process.execPath:path.join(appRoot,installed.manifest.entry);args=installed.manifest.runtime==='node'?[path.join(appRoot,installed.manifest.entry)]:[];if(d.id==='power')args=['--host','127.0.0.1','--port',String(d.backendPort),'--config',path.join(dataDir,'settings.json'),'--no-browser'];if(['record','ultrix'].includes(d.id))args.push('--config',serviceConfig.file(dir,d.id));}
+        let appRoot=resources,assetRoot="";
+        if(library){const installed=library.read(d.id);if(!installed)throw Error('Install this app from App Library.');appRoot=installed.root;assetRoot=installed.manifest.runtime!=='native'?appRoot:"";({command,args}=require('./app-runtime.cjs').launchSpec(installed,{resources,dataDir,port:d.backendPort}));if(d.id==='power'&&installed.manifest.runtime==='native')args=['--host','127.0.0.1','--port',String(d.backendPort),'--config',path.join(dataDir,'settings.json'),'--no-browser'];if(['record','ultrix'].includes(d.id))args.push('--config',serviceConfig.file(dir,d.id));}
         const log=fs.openSync(logPath,'a',0o600);
-        const child=spawn(command,args,{windowsHide:true,env:{...process.env,TECH_HUB_MANAGED:'1',TECH_HUB_VERSION:require('../package.json').version,TECH_HUB_PUBLIC_PORT:String(d.port),TECH_HUB_PUBLIC_HOST:config.host,TECH_HUB_BACKEND_PORT:String(d.backendPort),TECH_HUB_BACKEND_HOST:'127.0.0.1',TECH_HUB_DATA_DIR:dataDir,LNA_APP_SUPPORT:dataDir,LNA_MA_READER:process.platform==='darwin'?path.join(appRoot,'MA Web Remote Reader.app','Contents','MacOS','MA Web Remote Reader'):''},stdio:['ignore',log,log]});fs.closeSync(log);return child;
+        const child=spawn(command,args,{windowsHide:true,env:{...process.env,TECH_HUB_APP_ROOT:assetRoot,TECH_HUB_RUNTIME_API:path.join(__dirname,'runtime-api.cjs'),TECH_HUB_MANAGED:'1',TECH_HUB_VERSION:require('../package.json').version,TECH_HUB_PUBLIC_PORT:String(d.port),TECH_HUB_PUBLIC_HOST:config.host,TECH_HUB_BACKEND_PORT:String(d.backendPort),TECH_HUB_BACKEND_HOST:'127.0.0.1',TECH_HUB_DATA_DIR:dataDir,LNA_APP_SUPPORT:dataDir,LNA_MA_READER:process.platform==='darwin'?path.join(appRoot,'MA Web Remote Reader.app','Contents','MacOS','MA Web Remote Reader'):''},stdio:['ignore',log,log]});fs.closeSync(log);return child;
       },
       check:async()=>{const response=await fetch(`http://127.0.0.1:${d.backendPort}/`,{signal:AbortSignal.timeout(1500)});await response.body?.cancel();return response.ok;},
       report:state=>{diagnostics.event(d.id,state);states.set(d.id,state);}

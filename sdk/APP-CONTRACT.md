@@ -1,4 +1,4 @@
-# App contract, version 1
+# App contract, schema 1 — host 1.0.1
 
 Every package contains `techhub-app.json` at its root. Required fields:
 
@@ -7,11 +7,15 @@ Every package contains `techhub-app.json` at its root. Required fields:
 - `name`: user-visible name, at most 80 characters
 - `description`: plain text, at most 240 characters
 - `version` and `minHostVersion`: numeric `major.minor.patch`
-- `runtime`: `node` or `native`
-- `entry`: a relative file path inside the package
+- `runtime`: `node` for new apps; `shared` for reserved host engines; `native` for legacy packages
+- `entry`: a relative file path inside the package (Node entry point; UI entry for a reserved shared engine)
 - `accent`: a six-digit hexadecimal color
 - `permissions`: an array of declared capabilities (`network`, `device-control`, `data-files`)
-- `platforms`: supported platform IDs (`darwin-arm64`, `win32-x64`)
+- `platforms`: `["universal"]` for new apps; legacy platform IDs are `darwin-arm64` and `win32-x64`
+- `runtimeAPI`: `1` when using the shared helper API
+- `engine`: required only for `runtime: "shared"`; reserved official IDs `dsan` and `power`
+
+Universal packages require `minHostVersion: "1.0.1"` or later and cannot contain native executables or add-ons. See [shared runtime](SHARED-RUNTIME.md) for the helper API and compatibility-engine behavior.
 
 The host launches one process per enabled app and provides:
 
@@ -22,6 +26,8 @@ The host launches one process per enabled app and provides:
 | TECH_HUB_DATA_DIR | Persistent app settings directory; create it if needed |
 | TECH_HUB_PUBLIC_PORT | Assigned gateway port, not the internal listener |
 | TECH_HUB_VERSION | Host version |
+| TECH_HUB_RUNTIME_API | Absolute path to the host’s versioned CommonJS helper API |
+| TECH_HUB_APP_ROOT | Installed app directory; read-only assets, never user settings |
 | TECH_HUB_MANAGED | `1` when run by Tech Hub |
 
 Return HTTP 200 from `/` when ready. Keep HTTP responses bounded and handle client disconnects. Support termination with SIGTERM; Windows shutdown may terminate the process, so persist changes atomically when saved. Do not rely solely on shutdown to save settings.

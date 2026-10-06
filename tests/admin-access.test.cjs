@@ -11,7 +11,7 @@ test('administrator sessions expire, bind to the actual client, revoke, and thro
 });
 test('viewer tracking groups actual IPs and services, expires inactive pages, and removes disabled services',()=>{
  let now=0;const tracker=createViewers({now:()=>now});const req=id=>({headers:{'x-techhub-viewer':id,'x-forwarded-for':'fake'},socket:{remoteAddress:'::ffff:192.0.2.1'}});
- assert.equal(tracker.touch(req('bad'),'dsan'),false);tracker.touch(req('page-123456'),'dsan');tracker.touch(req('page-abcdef'),'dsan');tracker.touch(req('page-123456'),'lux');assert.equal(tracker.list().length,2);assert.equal(tracker.list()[0].ip,'192.0.2.1');assert.equal(tracker.list()[0].sessions,2);tracker.remove('lux');assert.equal(tracker.list().length,1);now=60000;assert.deepEqual(tracker.list(),[]);
+ assert.equal(tracker.touch(req('bad'),'dsan'),false);tracker.touch(req('page-123456'),'dsan');tracker.touch(req('page-abcdef'),'dsan');tracker.touch(req('page-123456'),'power');assert.equal(tracker.list().length,2);assert.equal(tracker.list()[0].ip,'192.0.2.1');assert.equal(tracker.list()[0].sessions,2);tracker.remove('power');assert.equal(tracker.list().length,1);now=60000;assert.deepEqual(tracker.list(),[]);
 });
 function request(port,host,url,method='GET',body,headers={}){return new Promise((resolve,reject)=>{const req=http.request({host:'127.0.0.1',port,path:url,method,headers:{Host:host,...headers,...(body!==undefined?{'Content-Type':typeof body==='string'?'application/x-www-form-urlencoded':'application/json'}:{})}},res=>{let text='';res.on('data',c=>text+=c);res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,text}));});req.on('error',reject);req.end(body===undefined?undefined:typeof body==='string'?body:JSON.stringify(body));});}
 test('remote administration defaults off, requires four characters, gates APIs, grants service settings, and revokes immediately',async()=>{
@@ -28,7 +28,7 @@ test('remote administration defaults off, requires four characters, gates APIs, 
   const login=await request(port,remote,'/login','POST','password=1234');assert.equal(login.status,303);const Cookie=login.headers['set-cookie'][0].split(';')[0];
   const status=await request(port,remote,'/api/status','GET',undefined,{Cookie});assert.equal(status.status,200);assert.equal(JSON.parse(status.text).localAdmin,false);assert(!status.text.includes('hash'));
   assert.equal((await request(port,'evil.invalid:'+port,'/api/status','GET',undefined,{Cookie})).status,403);
-  assert.equal((await request(port,remote,'/api/enabled','POST',{id:'lux',enabled:false},{Cookie})).status,200);
+  assert.equal((await request(port,remote,'/api/enabled','POST',{id:'power',enabled:false},{Cookie})).status,200);
   const service=hub.config.services.record.port;
   assert.equal(JSON.parse((await request(service,'tech.local:'+service,'/api/example','GET',undefined,{Cookie})).text).admin,'1');
   assert.equal(JSON.parse((await request(service,'tech.local:'+service,'/api/example','GET',undefined,{'x-techhub-local-client':'1'})).text).admin,'0');
