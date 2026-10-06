@@ -6,11 +6,30 @@ One desktop application for **D’san Ready**, **Power Monitor**, **NETGEAR AV S
 
 Version **1.0.1** adds universal app packages and a shared host runtime. Lux Link is paused; its saved settings are retained. See the [changelog](CHANGELOG.md).
 
-| Download | macOS (Apple silicon) | Windows (x64) |
-| --- | --- | --- |
-| **Tech Hub Host** — choose apps after installation | [Host installer](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64.dmg) | [Host installer](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Setup.exe) |
-| **Tech Hub Full** — all five apps included, no app downloads needed | [Full installer](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64-Full.dmg) | [Full installer](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Full-Setup.exe) |
-| **Download all apps** — offline bundle for an existing host | [Universal apps ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps.zip) | [Same universal apps ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps.zip) |
+### Full w/all apps
+
+Tech Hub with all five apps included for offline installation.
+
+- [Mac — Apple silicon](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64-Full.dmg)
+- [Windows — x64](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Full-Setup.exe)
+
+### Lite Installer
+
+Tech Hub host and shared runtime. Choose and download apps from the App Library after installation.
+
+- [Mac — Apple silicon](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-macOS-arm64.dmg)
+- [Windows — x64](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-Windows-x64-Setup.exe)
+
+### Apps
+
+Universal packages for Mac and Windows.
+
+- **[Download all apps — offline ZIP](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-All-Apps.zip)**
+- [Individual app downloads](https://github.com/horner516/Tech-Hub/releases/latest#apps)
+- [Download Developer SDK](https://github.com/horner516/Tech-Hub/releases/latest/download/Tech-Hub-SDK.zip)
+- [AI tools — development instructions and starter prompts](sdk/AI-DEVELOPMENT.md)
+- [SDK documentation and shared-runtime guide](sdk/SHARED-RUNTIME.md)
+
 
 Open **App Library** in the master page to install individual apps, **Install selected**, or **Install all apps**. Full installers unpack their included apps on first launch. To use an all-apps ZIP, choose **App Library → Offline installation → Install offline bundle**. The ZIP must match the official catalog shipped with the host or a refreshed catalog. Do not extract it first. All installed apps remain available offline.
 

@@ -124,6 +124,7 @@ jobs:
           rm -f installers/app-packages-universal/catalog.json
           find installers -mindepth 1 -type d -empty -delete
           node scripts/release-catalog.cjs installers
+          node scripts/release-notes.cjs installers/tech-hub-catalog.json > /tmp/techhub-release-notes.md
       - name: Publish installers together
         env:
           GH_TOKEN: ${{ github.token }}
@@ -132,6 +133,6 @@ jobs:
             test "$(cat /tmp/techhub-release-draft)" = true || { echo 'Refusing to overwrite a published release'; exit 1; }
             gh release upload "$GITHUB_REF_NAME" installers/* --clobber
           else
-            gh release create "$GITHUB_REF_NAME" installers/* --draft --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file RELEASE_NOTES.md --verify-tag
+            gh release create "$GITHUB_REF_NAME" installers/* --draft --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file /tmp/techhub-release-notes.md --verify-tag
           fi
-          gh release edit "$GITHUB_REF_NAME" --draft=false --latest --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file RELEASE_NOTES.md
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest --title "Tech Hub ${GITHUB_REF_NAME#v}" --notes-file /tmp/techhub-release-notes.md
